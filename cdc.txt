@@ -1,0 +1,103 @@
+Voici un **mini cahier des charges (CDC)** pour le projet **GSB CENTRAL** — clair, concis et centré sur les éléments essentiels :
+
+---
+
+# **Cahier des Charges – GSB CENTRAL**
+
+## **1. Présentation du projet**
+
+**Nom du projet :** GSB CENTRAL
+**Objectif :** Développer un site web permettant la gestion centralisée des commandes clients, du suivi commercial et de la logistique interne.
+**Technologies utilisées :**
+
+* **Langage :** PHP (avec Composer)
+* **Base de données :** MariaDB
+* **Frontend :** Tailwind CSS, JavaScript
+* **Hébergement :** IONOS
+* **URL de référence :** [https://gsb-nolan-liogier.fr/](https://gsb-nolan-liogier.fr/)
+
+---
+
+## **2. Utilisateurs et rôles**
+
+### **2.1 Client**
+
+* Création et authentification de compte client
+* Consultation des produits disponibles
+* **Saisie de commandes** (choix produits, quantités, adresse de livraison, etc.)
+* Suivi du statut de commande (ex. : En attente, Validée, Expédiée, Livrée)
+
+### **2.2 Commercial**
+
+* Accès aux informations de ses clients
+* **Gestion des commandes clients :**
+
+  * Consultation et modification des commandes
+  * Changement du statut (validation, annulation, mise en attente)
+* **Gestion des informations clients** (mise à jour des données société, contacts, etc.)
+
+### **2.3 Logisticien**
+
+* Gestion du **stock produits** (CRUD complet : création, lecture, modification, suppression)
+* Préparation et expédition des commandes validées
+* Mise à jour du **statut logistique** (ex. : en préparation, expédiée)
+* Suivi des entrées et sorties de stock
+
+---
+
+## **3. Fonctionnalités principales**
+
+### **3.1 Authentification & Sécurité**
+
+* Système de connexion par rôle
+* Gestion des sessions et permissions selon le profil utilisateur
+* Sécurité des mots de passe (hachage, validation)
+
+### **3.2 Commandes**
+
+* Formulaire de création de commande (côté client)
+* Liste des commandes par statut
+* Validation/annulation par le commercial
+* Suivi logistique (mise à jour par le logisticien)
+
+### **3.3 Gestion du stock (Logisticien)**
+
+* CRUD sur les articles (ajout, modification, suppression, consultation)
+* Gestion des quantités disponibles
+* Historique des mouvements de stock
+
+### **3.4 Espace Commercial**
+
+* Tableau de bord récapitulatif (commandes, clients, performances)
+* Accès et édition des fiches clients
+* Gestion du statut des commandes
+
+### **3.5 Interface & Design**
+
+* Interface responsive (Tailwind CSS)
+* Navigation claire par rôle
+* Tableaux dynamiques (JS) pour la consultation des commandes et du stock
+
+---
+
+## **4. Architecture technique**
+
+* **Backend :** PHP (structure MVC conseillée)
+* **Gestion des dépendances :** Composer
+* **Base de données :** MariaDB (tables : utilisateurs, clients, produits, commandes, détails_commandes, statuts, stock)
+* **Frontend :** Tailwind CSS + JavaScript
+* **Hébergement :** Serveur mutualisé IONOS
+
+---
+
+## **5. Contraintes et livrables**
+
+* Application web fonctionnelle en production sur IONOS
+* Respect du découpage des rôles et des permissions
+* Base de données relationnelle cohérente et normalisée
+* Documentation minimale d’installation et d’utilisation
+
+---
+
+Souhaitez-vous que je te fasse aussi le **schéma logique de la base de données (MLD)** correspondant à ce cahier des charges ?
+Cela pourrait compléter parfaitement ton mini CDC.

@@ -1,9 +1,8 @@
 <?php
+require_once 'vendor/autoload.php';
 
-require_once __DIR__ . '/vendor/autoload.php';
-
-use App\Public\Router;
+use Routing\Router;
 
 $router = new Router();
-
 $router->getRoute();
+exit();

@@ -4,3 +4,5 @@
 .vscode/
 .DS_Store
 *.log
+docker-compose.yml
+Dockerfile

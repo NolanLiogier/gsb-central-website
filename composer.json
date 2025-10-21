@@ -1,0 +1,11 @@
+{
+    "name": "gsb/gsb-central-website",
+    "description": "GSB Central Website",
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/",
+            "App\\Public\\": "public/"
+        }
+    },
+    "require": {}
+}

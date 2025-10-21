@@ -5,8 +5,17 @@ namespace App\Controllers;
 use App\Repositories\LoginRepository;
 use App\Helpers\RenderService;
 
+/**
+ * Classe LoginController
+ * Gère l\'authentification des utilisateurs.
+ */
 class LoginController
 {
+    /**
+     * Gère la logique d\'affichage et de traitement du formulaire de connexion.
+     *
+     * @return void
+     */
     public function index(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['email']) {
@@ -19,6 +28,11 @@ class LoginController
         }
     }
 
+    /**
+     * Traite la tentative de connexion de l\'utilisateur.
+     *
+     * @return void
+     */
     public function login(): void
     {
         $email = $_POST['email'] ?? '';
@@ -37,10 +51,16 @@ class LoginController
         exit;
     }
 
+    /**
+     * Affiche la page de connexion.
+     *
+     * @param array $datas Données à passer à la vue.
+     * @return void
+     */
     public function displayLogin($datas = []): void
     {
         $renderService = new RenderService();
-        $renderService->render("LoginTemplate", $datas);
+        $renderService->render("Login", $datas);
         exit();
     }
 }

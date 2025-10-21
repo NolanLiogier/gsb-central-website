@@ -6,14 +6,41 @@ use PDO;
 use PDOException;
 use Dotenv\Dotenv;
 
+/**
+ * Classe Database
+ * Gère la connexion à la base de données en utilisant PDO.
+ */
 class Database
 {
+    /**
+     * @var string L'hôte de la base de données.
+     */
     private string $host;
+
+    /**
+     * @var string Le nom de la base de données.
+     */
     private string $db_name;
+
+    /**
+     * @var string Le nom d'utilisateur de la base de données.
+     */
     private string $username;
+
+    /**
+     * @var string Le mot de passe de la base de données.
+     */
     private string $password;
+
+    /**
+     * @var PDO|null L'objet de connexion PDO.
+     */
     public ?PDO $conn = null;
 
+    /**
+     * Constructeur de la classe Database.
+     * Charge les variables d'environnement et initialise les paramètres de connexion à la base de données.
+     */
     public function __construct()
     {
         $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
@@ -25,6 +52,11 @@ class Database
         $this->password = $_ENV['DB_PASSWORD'];
     }
 
+    /**
+     * Établit et retourne une connexion PDO à la base de données.
+     *
+     * @return PDO|null L'objet de connexion PDO, ou null si la connexion échoue.
+     */
     public function getConnection(): ?PDO
     {
         $this->conn = null;

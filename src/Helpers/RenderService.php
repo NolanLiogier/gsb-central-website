@@ -6,12 +6,22 @@ use Routing\Router;
 use Templates\HomeTemplate;
 use Templates\LoginTemplate;
 
+/**
+ * Classe RenderService
+ * Gère le rendu des templates.
+ */
 class RenderService
 {
+    /**
+     * Rend un template spécifique avec les données fournies.
+     *
+     * @param string $templateName Le nom du template à rendre (ex: "Home", "Login").
+     * @param array $datas Les données à passer au template.
+     * @return void
+     */
     public function render(string $templateName, array $datas = []): void
     {
-        $className = '\\Templates\\' . ucfirst($templateName);
-
+        $className = '\\Templates\\' . ucfirst($templateName) . 'Template';
         $methodName = 'display' . ucfirst($templateName);
 
         if (!class_exists($className)) {

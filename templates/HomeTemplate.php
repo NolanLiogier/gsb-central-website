@@ -2,8 +2,18 @@
 
 namespace Templates;
 
+/**
+ * Classe HomeTemplate
+ * Gère l\'affichage du template de la page d\'accueil.
+ */
 class HomeTemplate {
-    public static function displayHomeTemplate($datas) {
+    /**
+     * Affiche le contenu HTML de la page d\'accueil.
+     *
+     * @param array $datas Données à utiliser pour le template.
+     * @return void
+     */
+    public static function displayHome($datas) {
 ?>
 <!DOCTYPE html>
 <html lang="en">

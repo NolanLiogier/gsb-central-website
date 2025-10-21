@@ -2,11 +2,23 @@
 
 namespace App\Controllers;
 
+use App\Helpers\RenderService;
+
+/**
+ * Classe NotFoundController
+ * Gère l\'affichage de la page 404 (non trouvée).
+ */
 class NotFoundController
 {
-    public function index()
+    /**
+     * Affiche la page 404.
+     *
+     * @return void
+     */
+    public function index(): void
     {
-        header("HTTP/1.0 404 Not Found");
-        echo '404 Not Found';
+        $renderService = new RenderService();
+        $renderService->render('NotFound');
+        exit();
     }
 }

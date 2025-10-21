@@ -2,14 +2,24 @@
 
 namespace Templates;
 
+/**
+ * Classe LoginTemplate
+ * Gère l'affichage du template de la page de connexion.
+ */
 class LoginTemplate
 {
-    public static function displayLoginTemplate(array $datas = []): void
+    /**
+     * Affiche le contenu HTML de la page de connexion.
+     *
+     * @param array $datas Données à utiliser pour le template, par exemple les messages d'erreur.
+     * @return void
+     */
+    public static function displayLogin(array $datas = []): void
     {
         // Example of how to use datas if needed, e.g., for error messages
         $errorMessage = $datas['error'] ?? '';
 
-        echo <<<HTML
+        echo <<<'HTML'
             <!DOCTYPE html>
             <html lang="fr">
             <head>

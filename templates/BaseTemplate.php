@@ -2,54 +2,44 @@
 
 namespace Templates;
 
+/**
+ * Template de base pour toutes les pages de l'application GSB Central
+ * Gère la structure HTML commune, les notifications et le layout conditionnel
+ */
 class BaseTemplate
 {
+    /**
+     * Génère le HTML complet d'une page avec header, contenu et footer
+     * @param string $title - Titre de la page affiché dans l'onglet du navigateur
+     * @param string $content - Contenu principal de la page
+     * @return string - HTML complet de la page
+     */
     public static function render($title = 'GSB Central', $content = ''): string
     {
-        return '
-        <!DOCTYPE html>
-        <html lang="fr">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>' . htmlspecialchars(string: $title) . '</title>
+        // Initialisation du script de notification pour afficher les messages de session
+        $notificationScript = '';
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+        
+        // Récupération et affichage des notifications stockées en session
+        if (isset($_SESSION['notification'])) {
+            $notification = $_SESSION['notification'];
+            $type = $notification['type'] ?? 'success';
+            $message = htmlspecialchars($notification['message'] ?? '');
+            $duration = $notification['duration'] ?? 5000;
             
-            <!-- Favicon -->
-            <link rel="icon" type="image/x-icon" href="/favicon.ico">
-            <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
-            <link rel="apple-touch-icon" href="/favicon.ico">
-            
-            <!-- SEO Meta Tags -->
-            <meta name="description" content="GSB Central - Plateforme de gestion centralisée pour les entreprises. Tableau de bord, gestion des entreprises, commandes et stock.">
-            <meta name="keywords" content="GSB, gestion, entreprise, commandes, stock, tableau de bord, administration">
-            <meta name="author" content="GSB Central">
-            <meta name="robots" content="index, follow">
-            <meta name="googlebot" content="index, follow">
-            <meta name="language" content="fr">
-            <meta name="revisit-after" content="7 days">
-            
-            <!-- Open Graph Meta Tags -->
-            <meta property="og:title" content="' . htmlspecialchars(string: $title) . '">
-            <meta property="og:description" content="GSB Central - Plateforme de gestion centralisée pour les entreprises">
-            <meta property="og:type" content="website">
-            <meta property="og:url" content="https://gsb-nolan-liogier.fr">
-            <meta property="og:site_name" content="GSB Central">
-            <meta property="og:locale" content="fr_FR">
-            
-            <!-- Twitter Card Meta Tags -->
-            <meta name="twitter:card" content="summary">
-            <meta name="twitter:title" content="' . htmlspecialchars(string: $title) . '">
-            <meta name="twitter:description" content="GSB Central - Plateforme de gestion centralisée pour les entreprises">
-            
-            <!-- Canonical URL -->
-            <link rel="canonical" href="https://gsb-nolan-liogier.fr">
-            
-            <!-- Stylesheets -->
-            <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-            <!-- Font Awesome for icons -->
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-        </head>
-        <body class="bg-gray-100 font-sans antialiased min-h-screen flex flex-col">
+            // Génération du script JavaScript pour afficher la notification
+            $notificationScript = "<script>showNotification('{$message}', '{$type}', {$duration});</script>";
+            unset($_SESSION['notification']);
+        }
+
+        // Définition des pages qui utilisent un layout complet (sans header/footer)
+        $fullPageTitles = ['Connexion - GSB', '404 Not Found'];
+        $isFullPage = in_array($title, $fullPageTitles);
+
+        // Construction du header avec navigation et barre de recherche
+        $header = $isFullPage ? '' : '
             <header class="bg-white shadow-sm">
                 <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
                     <div class="flex items-center">
@@ -80,15 +70,77 @@ class BaseTemplate
                         </div>
                     </div>
                 </nav>
-            </header>
+            </header>';
+
+        // Construction de la zone principale avec le contenu de la page
+        $main = $isFullPage ? $content : '
             <main class="container mx-auto mt-4 p-4 flex-grow">
                 ' . $content . '
-            </main>
+            </main>';
+
+        // Construction du footer avec copyright
+        $footer = $isFullPage ? '' : '
             <footer class="bg-white py-4 mt-8 border-t border-gray-200">
                 <div class="container mx-auto text-center text-gray-600 text-sm">
                     &copy;2024 GSB Central. Tous droits réservés.
                 </div>
-            </footer>
+            </footer>';
+
+        // Définition des classes CSS du body selon le type de page
+        $bodyClass = $isFullPage ? 'bg-gray-100 font-sans antialiased min-h-screen' : 'bg-gray-100 font-sans antialiased min-h-screen flex flex-col';
+
+        // Génération du HTML complet de la page
+        return '
+        <!DOCTYPE html>
+        <html lang="fr">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>' . htmlspecialchars(string: $title) . '</title>
+            
+            <!-- Favicon pour l\'icône du site -->
+            <link rel="icon" type="image/x-icon" href="/favicon.ico">
+            <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+            <link rel="apple-touch-icon" href="/favicon.ico">
+            
+            <!-- Balises meta pour le SEO -->
+            <meta name="description" content="GSB Central - Plateforme de gestion centralisée pour les entreprises. Tableau de bord, gestion des entreprises, commandes et stock.">
+            <meta name="keywords" content="GSB, gestion, entreprise, commandes, stock, tableau de bord, administration">
+            <meta name="author" content="GSB Central">
+            <meta name="robots" content="index, follow">
+            <meta name="googlebot" content="index, follow">
+            <meta name="language" content="fr">
+            <meta name="revisit-after" content="7 days">
+            
+            <!-- Balises Open Graph pour le partage sur les réseaux sociaux -->
+            <meta property="og:title" content="' . htmlspecialchars(string: $title) . '">
+            <meta property="og:description" content="GSB Central - Plateforme de gestion centralisée pour les entreprises">
+            <meta property="og:type" content="website">
+            <meta property="og:url" content="https://gsb-nolan-liogier.fr">
+            <meta property="og:site_name" content="GSB Central">
+            <meta property="og:locale" content="fr_FR">
+            
+            <!-- Balises Twitter Card pour l\'affichage sur Twitter -->
+            <meta name="twitter:card" content="summary">
+            <meta name="twitter:title" content="' . htmlspecialchars(string: $title) . '">
+            <meta name="twitter:description" content="GSB Central - Plateforme de gestion centralisée pour les entreprises">
+            
+            <!-- URL canonique pour éviter le contenu dupliqué -->
+            <link rel="canonical" href="https://gsb-nolan-liogier.fr">
+            
+            <!-- Feuilles de style externes -->
+            <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+            <!-- Font Awesome pour les icônes -->
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+        </head>
+        <body class="' . $bodyClass . '">
+            ' . $header . '
+            ' . $main . '
+            ' . $footer . '
+            
+            <!-- Script du système de notifications -->
+            <script src="/public/assets/js/notifications.js"></script>
+            ' . $notificationScript . '
         </body>
         </html>
         ';

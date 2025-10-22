@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use Config\Database;
+use PDO;
 
 /**
  * Classe LoginRepository
@@ -11,21 +12,23 @@ use Config\Database;
 class LoginRepository
 {
     /**
-     * Vérifie si un email existe déjà dans la base de données.
+     * Récupère les données d'un utilisateur par son email.
      *
-     * @param string $email L\'adresse email à vérifier.
-     * @return bool Vrai si l\'email existe, faux sinon.
+     * @param string $email L\'adresse email de l\'utilisateur.
+     * @return array Les données de l\'utilisateur si l\'email existe, un tableau vide sinon.
      */
-    public function checkEmailExists(string $email): bool
+    public function getUserByEmail(string $email): array
     {
         $database = new Database();
         $conn = $database->getConnection();
 
-        $sql = "SELECT email FROM users WHERE email = :email";
+        $sql = "SELECT email, password, firstname, lastname FROM users WHERE email = :email";
         $stmt = $conn->prepare($sql);
         $stmt->execute(['email' => $email]);
-        $user = $stmt->fetch();
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $user !== false;
+        // PDO::fetch retourne false si aucun résultat, on doit gérer ce cas
+        return $user !== false ? $user : [];
     }
+
 }

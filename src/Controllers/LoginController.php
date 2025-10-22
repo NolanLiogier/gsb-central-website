@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Repositories\LoginRepository;
 use App\Helpers\RenderService;
-use Routing\Router;
 
 /**
  * Classe LoginController
@@ -22,7 +21,8 @@ class LoginController
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['email']) {
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['password'])) {
             $this->login();
             exit;
         }
@@ -42,18 +42,43 @@ class LoginController
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
-        $email = $_POST['email'] ?? '';
+
+        $email = $_POST['email'] ?? "";
+        $password = $_POST['password'] ?? "";
         $loginRepository = new LoginRepository();
 
-        if (!$loginRepository->checkEmailExists(email: $email)) {
-            $_SESSION['error_message']  = 'Utilisateur inconnu';
+        $user = $loginRepository->getUserByEmail($email);
+        if (empty($user)) {
+            $_SESSION['notification'] = [
+                'type' => 'danger',
+                'message' => 'Utilisateur inconnu',
+                'duration' => 5000
+            ];
             $this->displayLogin();
             exit;
         }
 
-        $_SESSION['succes_message']  = 'Utilisateur correct';
-        $router = new Router();
-        $router->getRoute("/home");
+        if (!password_verify($password, $user['password'])) {
+            $_SESSION['notification'] = [
+                'type' => 'danger',
+                'message' => 'Mot de passe incorrect',
+                'duration' => 5000
+            ];
+            $this->displayLogin();
+            exit;
+        }
+
+        $_SESSION['notification'] = [
+            'type' => 'success',
+            'message' => 'Connexion réussie',
+            'duration' => 3000
+        ];
+        
+        $_SESSION['user_email'] = $user['email'];
+        $_SESSION['user_firstname'] = $user['firstname'];
+        $_SESSION['user_lastname'] = $user['lastname'];
+        
+        header('Location: /home', true, 302);
         exit;
     }
 

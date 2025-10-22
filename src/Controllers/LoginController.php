@@ -4,20 +4,24 @@ namespace App\Controllers;
 
 use App\Repositories\LoginRepository;
 use App\Helpers\RenderService;
+use Routing\Router;
 
 /**
  * Classe LoginController
- * Gère l\'authentification des utilisateurs.
+ * Gère l'authentification des utilisateurs.
  */
 class LoginController
 {
     /**
-     * Gère la logique d\'affichage et de traitement du formulaire de connexion.
+     * Gère la logique d'affichage et de traitement du formulaire de connexion.
      *
      * @return void
      */
     public function index(): void
     {
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['email']) {
             $this->login();
             exit;
@@ -29,39 +33,44 @@ class LoginController
     }
 
     /**
-     * Traite la tentative de connexion de l\'utilisateur.
+     * Traite la tentative de connexion de l'utilisateur.
      *
      * @return void
      */
     public function login(): void
     {
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
         $email = $_POST['email'] ?? '';
         $loginRepository = new LoginRepository();
 
         if (!$loginRepository->checkEmailExists(email: $email)) {
-            $_SESSION['message'] = 'Utilisateur inconnu';
+            $_SESSION['error_message']  = 'Utilisateur inconnu';
             $this->displayLogin();
             exit;
         }
 
-        $_SESSION['logged_in'] = true;
-        $_SESSION['email'] = $email;
-        $_SESSION['message'] = 'Vous avez bien connecté';
-        header('Location: /home');
+        $_SESSION['succes_message']  = 'Utilisateur correct';
+        $router = new Router();
+        $router->getRoute("/home");
         exit;
     }
 
     /**
      * Affiche la page de connexion.
      *
-     * @param array $datas Données à passer à la vue.
      * @return void
      */
-    public function displayLogin($datas = []): void
+    public function displayLogin(): void
     {
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
         $renderService = new RenderService();
-        $renderService->render("Login", $datas);
+        $renderService->render("Login");
         exit();
     }
 }
+
 

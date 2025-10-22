@@ -2,30 +2,26 @@
 
 namespace Templates;
 
+use Templates\BaseTemplate;
+
 /**
  * Classe HomeTemplate
- * Gère l\'affichage du template de la page d\'accueil.
+ * Gère l'affichage du template de la page d'accueil.
  */
 class HomeTemplate {
     /**
-     * Affiche le contenu HTML de la page d\'accueil.
+     * Affiche le contenu HTML de la page d'accueil.
      *
      * @param array $datas Données à utiliser pour le template.
-     * @return void
+     * @return string The full HTML page.
      */
     public static function displayHome($datas) {
+        ob_start(); // Start output buffering
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
-    <h1><?php echo htmlspecialchars($datas['message']); ?></h1>
-</body>
-</html>
+    <h1 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars($datas['message']); ?></h1>
 <?php
+        $content = ob_get_clean(); // Get the buffered content
+
+        return BaseTemplate::render('Home Page', $content);
     }
 }

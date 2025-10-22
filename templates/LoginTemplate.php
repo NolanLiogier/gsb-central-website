@@ -11,15 +11,23 @@ class LoginTemplate
     /**
      * Affiche le contenu HTML de la page de connexion.
      *
-     * @param array $datas Données à utiliser pour le template, par exemple les messages d'erreur.
-     * @return void
+     * @param array $datas Les données à passer au template.
+     * @return string Le contenu HTML de la page.
      */
-    public static function displayLogin(array $datas = []): void
+    public static function displayLogin(array $datas = []): string
     {
-        // Example of how to use datas if needed, e.g., for error messages
-        $errorMessage = $datas['error'] ?? '';
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
 
-        echo <<<'HTML'
+        $errorMessage = $_SESSION['error_message'] ?? '';
+        unset($_SESSION['error_message']);
+
+        if (!empty($errorMessage)) {
+            $errorMessage = '<p class="text-red-500 text-center mt-4">' . htmlspecialchars($errorMessage) . '</p>';
+        }
+
+        return <<<HTML
             <!DOCTYPE html>
             <html lang="fr">
             <head>
@@ -44,9 +52,7 @@ class LoginTemplate
                         </div>
                     </form>
                     <!-- Display error message if present -->
-                    <?php if (!empty($errorMessage)): ?>
-                        <p class="text-red-500 text-center mt-4"><?php echo htmlspecialchars($errorMessage); ?></p>
-                    <?php endif; ?>
+                    {$errorMessage}
                 </div>
             </body>
             </html>

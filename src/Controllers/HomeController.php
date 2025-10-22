@@ -4,22 +4,27 @@ namespace App\Controllers;
 
 use App\Repositories\HomeRepository;
 use App\Helpers\RenderService;
-use Templates\HomeTemplates;
 
 /**
  * Classe HomeController
  * Gère l\'affichage de la page d\'accueil.
  */
 class HomeController {
+    private HomeRepository $homeRepository;
+    private RenderService $renderService;
+
+    public function __construct()
+    {
+        $this->homeRepository = new HomeRepository();
+        $this->renderService = new RenderService();
+    }
     /**
      * Affiche la page d\'accueil avec les données récupérées.
      *
      * @return void
      */
     public function index(): void {
-        $repository = new HomeRepository();
-        $datas = $repository->getDatas();
-
+        $datas = $this->homeRepository->getDatas();
         $this->displayHome($datas);
         exit;
     }
@@ -32,8 +37,7 @@ class HomeController {
      */
     public function displayHome($datas = []): void
     {
-        $renderService = new RenderService();
-        $renderService->render("Home", $datas);
+        $this->renderService->render("Home", $datas);
         exit();
     }
 }

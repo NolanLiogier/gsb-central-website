@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Repositories\LoginRepository;
+use App\Repositories\TempTokenRepository;
 use App\Helpers\RenderService;
 
 /**
@@ -11,6 +12,21 @@ use App\Helpers\RenderService;
  */
 class LoginController
 {
+    private LoginRepository $loginRepository;
+    private TempTokenRepository $tempTokenRepository;
+    private RenderService $renderService;
+
+    /**
+     * Constructeur du LoginController.
+     * Initialise les repositories et services nécessaires.
+     */
+    public function __construct()
+    {
+        $this->loginRepository = new LoginRepository();
+        $this->tempTokenRepository = new TempTokenRepository();
+        $this->renderService = new RenderService();
+    }
+
     /**
      * Gère la logique d'affichage et de traitement du formulaire de connexion.
      *
@@ -39,15 +55,10 @@ class LoginController
      */
     public function login(): void
     {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-
         $email = $_POST['email'] ?? "";
         $password = $_POST['password'] ?? "";
-        $loginRepository = new LoginRepository();
 
-        $user = $loginRepository->getUserByEmail($email);
+        $user = $this->loginRepository->getUserByEmail($email);
         if (empty($user)) {
             $_SESSION['notification'] = [
                 'type' => 'danger',
@@ -62,6 +73,20 @@ class LoginController
             $_SESSION['notification'] = [
                 'type' => 'danger',
                 'message' => 'Mot de passe incorrect',
+                'duration' => 5000
+            ];
+            $this->displayLogin();
+            exit;
+        }
+
+        $tokenValue = bin2hex(random_bytes(32));
+        $tokenId = $user['fk_token_id'];
+
+        $tokenUpdate = $this->tempTokenRepository->updateTokenValue($tokenId, $tokenValue);
+        if (!$tokenUpdate) {
+            $_SESSION['notification'] = [
+                'type' => 'danger',
+                'message' => 'Erreur lors de la mise à jour du token',
                 'duration' => 5000
             ];
             $this->displayLogin();
@@ -89,11 +114,7 @@ class LoginController
      */
     public function displayLogin(): void
     {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-        $renderService = new RenderService();
-        $renderService->render("Login");
+        $this->renderService->render("Login");
         exit();
     }
 }

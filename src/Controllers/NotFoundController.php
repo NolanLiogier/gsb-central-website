@@ -10,6 +10,14 @@ use App\Helpers\RenderService;
  */
 class NotFoundController
 {
+
+    private RenderService $renderService;
+
+    public function __construct()
+    {
+        $this->renderService = new RenderService();
+    }
+
     /**
      * Affiche la page 404.
      *
@@ -17,8 +25,7 @@ class NotFoundController
      */
     public function index(): void
     {
-        $renderService = new RenderService();
-        $renderService->render('NotFound');
+        $this->renderService->render('NotFound');
         exit();
     }
 }

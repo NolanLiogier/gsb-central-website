@@ -11,6 +11,13 @@ use PDO;
  */
 class LoginRepository
 {
+    private Database $database;
+
+    public function __construct()
+    {
+        $this->database = new Database();
+    }
+
     /**
      * Récupère les données d'un utilisateur par son email.
      *
@@ -19,16 +26,13 @@ class LoginRepository
      */
     public function getUserByEmail(string $email): array
     {
-        $database = new Database();
-        $conn = $database->getConnection();
+        $conn = $this->database->getConnection();
 
-        $sql = "SELECT email, password, firstname, lastname FROM users WHERE email = :email";
+        $sql = "SELECT user_id, email, password, firstname, lastname, fk_function_id, fk_token_id FROM users WHERE email = :email";
         $stmt = $conn->prepare($sql);
         $stmt->execute(['email' => $email]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        // PDO::fetch retourne false si aucun résultat, on doit gérer ce cas
-        return $user !== false ? $user : [];
+        $result = $stmt->fetch(PDO::FETCH_ASSOC) ?? [];
+        return $result;
     }
 
 }

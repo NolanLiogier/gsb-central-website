@@ -24,7 +24,7 @@ class LoginTemplate
         unset($_SESSION['error_message']);
 
         if (!empty($errorMessage)) {
-            $errorMessage = '<p class="text-red-500 text-center mt-4">' . htmlspecialchars($errorMessage) . '</p>';
+            $errorMessage = '<p class="text-red-500 text-center mt-4">' . htmlspecialchars(string: $errorMessage) . '</p>';
         }
 
         return <<<HTML

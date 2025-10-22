@@ -15,13 +15,13 @@ class HomeTemplate {
      * @param array $datas Données à utiliser pour le template.
      * @return string The full HTML page.
      */
-    public static function displayHome($datas) {
+    public static function displayHome($datas): string {
         ob_start(); // Start output buffering
 ?>
-    <h1 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars($datas['message']); ?></h1>
+    <h1 class="text-3xl font-bold text-gray-800"><?php echo htmlspecialchars(string: $datas['message']); ?></h1>
 <?php
         $content = ob_get_clean(); // Get the buffered content
 
-        return BaseTemplate::render('Home Page', $content);
+        return BaseTemplate::render(title: 'Home Page', content: $content);
     }
 }

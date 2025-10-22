@@ -4,7 +4,7 @@ namespace Templates;
 
 class BaseTemplate
 {
-    public static function render($title = 'GSB Central', $content = '')
+    public static function render($title = 'GSB Central', $content = ''): string
     {
         return '
         <!DOCTYPE html>

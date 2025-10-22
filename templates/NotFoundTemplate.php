@@ -30,6 +30,6 @@ class NotFoundTemplate
 <?php
         $content = ob_get_clean(); // Récupère le contenu mis en mémoire tampon
 
-        return BaseTemplate::render('404 Not Found', $content);
+        return BaseTemplate::render(title: '404 Not Found', content: $content);
     }
 }

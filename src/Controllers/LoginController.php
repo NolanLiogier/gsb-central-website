@@ -3,8 +3,10 @@
 namespace App\Controllers;
 
 use App\Repositories\LoginRepository;
+use Routing\Router;
 use App\Repositories\TempTokenRepository;
 use App\Helpers\RenderService;
+use App\Helpers\StatusMessageService;
 
 /**
  * Classe LoginController
@@ -13,8 +15,10 @@ use App\Helpers\RenderService;
 class LoginController
 {
     private LoginRepository $loginRepository;
+    private Router $router;
     private TempTokenRepository $tempTokenRepository;
     private RenderService $renderService;
+    private StatusMessageService $statusMessageService;
 
     /**
      * Constructeur du LoginController.
@@ -25,6 +29,8 @@ class LoginController
         $this->loginRepository = new LoginRepository();
         $this->tempTokenRepository = new TempTokenRepository();
         $this->renderService = new RenderService();
+        $this->statusMessageService = new StatusMessageService();
+        $this->router = new Router();
     }
 
     /**
@@ -34,16 +40,12 @@ class LoginController
      */
     public function index(): void
     {
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['password'])) {
             $this->login();
             exit;
         }
         else {
-            $this->displayLogin();
+            $this->renderService->render("Login");
             exit;
         }
     }
@@ -60,22 +62,12 @@ class LoginController
 
         $user = $this->loginRepository->getUserByEmail($email);
         if (empty($user)) {
-            $_SESSION['notification'] = [
-                'type' => 'danger',
-                'message' => 'Utilisateur inconnu',
-                'duration' => 5000
-            ];
-            $this->displayLogin();
+            $this->handleResult('Utilisateur inconnu', 'error', 'Login');
             exit;
         }
 
         if (!password_verify($password, $user['password'])) {
-            $_SESSION['notification'] = [
-                'type' => 'danger',
-                'message' => 'Mot de passe incorrect',
-                'duration' => 5000
-            ];
-            $this->displayLogin();
+            $this->handleResult('Mot de passe incorrect', 'error', 'Login');
             exit;
         }
 
@@ -84,39 +76,29 @@ class LoginController
 
         $tokenUpdate = $this->tempTokenRepository->updateTokenValue($tokenId, $tokenValue);
         if (!$tokenUpdate) {
-            $_SESSION['notification'] = [
-                'type' => 'danger',
-                'message' => 'Erreur lors de la mise à jour du token',
-                'duration' => 5000
-            ];
-            $this->displayLogin();
+            $this->handleResult('Erreur lors de la mise à jour du token', 'error', 'Login');
             exit;
         }
 
-        $_SESSION['notification'] = [
-            'type' => 'success',
-            'message' => 'Connexion réussie',
-            'duration' => 3000
-        ];
+        $this->statusMessageService->setSuccessMessage('Connexion réussie');
         
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_firstname'] = $user['firstname'];
         $_SESSION['user_lastname'] = $user['lastname'];
         
-        header('Location: /home', true, 302);
+        $this->router->getRoute('/home');
         exit;
     }
 
-    /**
-     * Affiche la page de connexion.
-     *
-     * @return void
-     */
-    public function displayLogin(): void
+    public function handleResult($message, $typeMessage, $route): void
     {
-        $this->renderService->render("Login");
+        match ($typeMessage) {
+            'success' => $this->statusMessageService->setSuccessMessage($message),
+            'error' => $this->statusMessageService->setErrorMessage($message),
+            'warning' => $this->statusMessageService->setWarningMessage($message),
+            default => throw new \Exception('Type de message invalide'),
+        };
+        $this->renderService->render($route);
         exit();
     }
 }
-
-

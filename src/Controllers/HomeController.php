@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Repositories\HomeRepository;
 use App\Helpers\RenderService;
+use App\Helpers\AuthenticationService;
 
 /**
  * Classe HomeController
@@ -12,18 +13,22 @@ use App\Helpers\RenderService;
 class HomeController {
     private HomeRepository $homeRepository;
     private RenderService $renderService;
+    private AuthenticationService $authenticationService;
 
     public function __construct()
     {
         $this->homeRepository = new HomeRepository();
         $this->renderService = new RenderService();
+        $this->authenticationService = new AuthenticationService();
     }
     /**
      * Affiche la page d\'accueil avec les données récupérées.
+     * Vérifie d\'abord que l\'utilisateur est authentifié.
      *
      * @return void
      */
     public function index(): void {
+        $this->authenticationService->verifyAuthentication();        
         $datas = $this->homeRepository->getDatas();
         $this->displayHome($datas);
         exit;

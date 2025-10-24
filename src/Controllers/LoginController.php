@@ -71,6 +71,7 @@ class LoginController
         $this->statusMessageService->setSuccessMessage('Connexion réussie');
         
         $_SESSION['user_email'] = $user['email'];
+        $_SESSION['user_role'] = $user['function_name'];
         $_SESSION['user_firstname'] = $user['firstname'];
         $_SESSION['user_lastname'] = $user['lastname'];
         

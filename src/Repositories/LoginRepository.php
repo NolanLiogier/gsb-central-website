@@ -28,7 +28,10 @@ class LoginRepository
     {
         $conn = $this->database->getConnection();
 
-        $sql = "SELECT user_id, email, password, firstname, lastname, fk_function_id FROM users WHERE email = :email";
+        $sql = "SELECT u.user_id, u.email, u.password, u.firstname, u.lastname, f.function_name 
+                FROM users u 
+                LEFT JOIN functions f ON u.fk_function_id = f.function_id 
+                WHERE u.email = :email";
         $stmt = $conn->prepare($sql);
         $stmt->execute(['email' => $email]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC) ?? [];

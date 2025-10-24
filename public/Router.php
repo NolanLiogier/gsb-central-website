@@ -2,8 +2,9 @@
 
 namespace Routing;
 
-use App\Controllers\LoginController;
+use App\Controllers\UserController;
 use App\Controllers\HomeController;
+use App\Controllers\CompaniesController;
 use App\Controllers\NotFoundController;
 use Dotenv\Dotenv;
 
@@ -26,7 +27,7 @@ class Router {
      * Si aucune route n'est spécifiée, utilise l'URI de la requête.
      * Démarre la session si elle n'est pas déjà active.
      *
-     * @param string|null $route La route à traiter (par exemple, '/', '/login'). Si null, utilise $_SERVER['REQUEST_URI'].
+     * @param string|null $route La route à traiter (par exemple, '/', '/user'). Si null, utilise $_SERVER['REQUEST_URI'].
      * @return void
      */
     public function getRoute(?string $route = null): void {
@@ -48,9 +49,10 @@ class Router {
         }
 
         $controller = match ($route) {
-            '/' => new LoginController(),
-            '/login' => new LoginController(),
+            '/' => new UserController(),
+            '/user' => new UserController(),
             '/home' => new HomeController(),
+            '/companies' => new CompaniesController(),
             default => new NotFoundController(),
         };
 

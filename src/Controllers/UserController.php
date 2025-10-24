@@ -2,29 +2,29 @@
 
 namespace App\Controllers;
 
-use App\Repositories\LoginRepository;
+use App\Repositories\UserRepository;
 use Routing\Router;
 use App\Helpers\RenderService;
 use App\Helpers\StatusMessageService;
 
 /**
- * Classe LoginController
+ * Classe UserController
  * Gère l'authentification des utilisateurs.
  */
-class LoginController
+class UserController
 {
-    private LoginRepository $loginRepository;
+    private UserRepository $userRepository;
     private Router $router;
     private RenderService $renderService;
     private StatusMessageService $statusMessageService;
 
     /**
-     * Constructeur du LoginController.
+     * Constructeur du UserController.
      * Initialise les repositories et services nécessaires.
      */
     public function __construct()
     {
-        $this->loginRepository = new LoginRepository();
+        $this->userRepository = new UserRepository();
         $this->renderService = new RenderService();
         $this->statusMessageService = new StatusMessageService();
         $this->router = new Router();
@@ -57,7 +57,7 @@ class LoginController
         $email = $_POST['email'] ?? "";
         $password = $_POST['password'] ?? "";
 
-        $user = $this->loginRepository->getUserByEmail($email);
+        $user = $this->userRepository->getUserByEmail($email);
         if (empty($user)) {
             $this->handleResult('Utilisateur inconnu', 'error', 'Login');
             exit;

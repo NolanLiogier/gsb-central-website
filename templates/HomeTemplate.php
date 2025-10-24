@@ -22,6 +22,6 @@ class HomeTemplate {
 <?php
         $content = ob_get_clean(); // Get the buffered content
 
-        return BaseTemplate::render(title: 'Home Page', content: $content);
+        return BaseTemplate::render(title: 'Home Page', content: $content, currentRoute: '/home');
     }
 }

@@ -22,7 +22,7 @@ class LoginTemplate
                     <div class="bg-white p-8 rounded-lg shadow-md border-t-4 border-blue-500">
                         <h1 class="text-2xl font-bold text-center mb-2">Bienvenue</h1>
                         <p class="text-gray-600 text-center mb-6">Connectez-vous pour continuer vers votre écosystème GSB.</p>
-                        <form action="/login" method="POST">
+                        <form action="/user" method="POST">
                             <div class="mb-4">
                                 <label for="email" class="block text-gray-700 text-sm font-bold mb-2">E-mail</label>
                                 <input type="email" id="email" name="email" placeholder="vous@exemple.com" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
@@ -42,6 +42,6 @@ class LoginTemplate
             </div>
         HTML;
 
-        return BaseTemplate::render('Connexion - GSB', $loginContent);
+        return BaseTemplate::render('Connexion - GSB', $loginContent, '/user');
     }
 }

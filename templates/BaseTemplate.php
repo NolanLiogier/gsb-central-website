@@ -9,12 +9,31 @@ namespace Templates;
 class BaseTemplate
 {
     /**
+     * Détermine si un lien de navigation est actif selon la route actuelle
+     * @param string $linkRoute - Route du lien à vérifier
+     * @param string $currentRoute - Route actuelle
+     * @return string - Classes CSS pour l'état actif ou normal
+     */
+    private static function getNavLinkClasses(string $linkRoute, string $currentRoute): string
+    {
+        $isActive = ($currentRoute === $linkRoute) || 
+                   ($currentRoute === '/' && $linkRoute === '/home');
+        
+        if ($isActive) {
+            return 'text-blue-600 font-semibold hover:text-blue-800';
+        }
+        
+        return 'text-gray-600 hover:text-gray-800';
+    }
+
+    /**
      * Génère le HTML complet d'une page avec header, contenu et footer
      * @param string $title - Titre de la page affiché dans l'onglet du navigateur
      * @param string $content - Contenu principal de la page
+     * @param string $currentRoute - Route actuelle pour déterminer l'état actif des liens
      * @return string - HTML complet de la page
      */
-    public static function render($title = 'GSB Central', $content = ''): string
+    public static function render($title = 'GSB Central', $content = '', $currentRoute = ''): string
     {
         // Initialisation du script de notification pour afficher les messages de session
         $notificationScript = '';
@@ -41,33 +60,76 @@ class BaseTemplate
         // Construction du header avec navigation et barre de recherche
         $header = $isFullPage ? '' : '
             <header class="bg-white shadow-sm">
-                <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
-                    <div class="flex items-center">
-                        <span class="text-xl font-bold text-gray-800">GSB Central</span>
+                <nav class="container mx-auto px-4 py-3">
+                    <!-- Header principal pour desktop -->
+                    <div class="hidden lg:flex justify-between items-center">
+                        <div class="flex items-center">
+                            <a href="/home" class="text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">GSB Central</a>
+                        </div>
+                        
+                        <!-- Navigation desktop -->
+                        <ul class="hidden lg:flex space-x-6">
+                            <li><a href="/home" class="' . self::getNavLinkClasses('/home', $currentRoute) . ' transition-colors">Tableau de bord</a></li>
+                            <li><a href="/companies" class="' . self::getNavLinkClasses('/companies', $currentRoute) . ' transition-colors">Entreprises</a></li>
+                            <li><a href="#" class="text-gray-600 hover:text-gray-800 transition-colors">Commandes</a></li>
+                            <li><a href="#" class="text-gray-600 hover:text-gray-800 transition-colors">Stock</a></li>
+                        </ul>
+                        
+                        <!-- Zone recherche desktop -->
+                        <div class="hidden lg:flex items-center">
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fas fa-search text-gray-400 group-hover:text-gray-600 transition-colors"></i>
+                                </div>
+                                <input 
+                                    type="search" 
+                                    placeholder="Rechercher..." 
+                                    class="w-64 pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200 hover:bg-white hover:border-gray-300">
+                            </div>
+                        </div>
                     </div>
-                    <ul class="flex space-x-6">
-                        <li><a href="#" class="text-blue-600 font-semibold hover:text-blue-800">Tableau de bord</a></li>
-                        <li><a href="#" class="text-gray-600 hover:text-gray-800">Entreprises</a></li>
-                        <li><a href="#" class="text-gray-600 hover:text-gray-800">Commandes</a></li>
-                        <li><a href="#" class="text-gray-600 hover:text-gray-800">Stock</a></li>
-                    </ul>
-                    <div class="flex items-center space-x-4">
-                        <div class="relative group">
+                    
+                    <!-- Header mobile -->
+                    <div class="lg:hidden flex justify-between items-center">
+                        <!-- Bouton menu mobile à gauche -->
+                        <button class="p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors" onclick="toggleMobileMenu()">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        
+                        <!-- Titre au centre -->
+                        <div class="flex-1 flex justify-center">
+                            <a href="/home" class="text-lg font-bold text-gray-800 hover:text-blue-600 transition-colors">GSB Central</a>
+                        </div>
+                        
+                        <!-- Icône recherche à droite -->
+                        <button class="p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors" onclick="toggleMobileSearch()">
+                            <i class="fas fa-search text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <!-- Barre de recherche mobile -->
+                    <div id="mobileSearch" class="hidden lg:hidden mt-4">
+                        <div class="relative">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-gray-400 group-hover:text-gray-600 transition-colors"></i>
+                                <i class="fas fa-search text-gray-400"></i>
                             </div>
                             <input 
                                 type="search" 
-                                placeholder="Rechercher dans GSB Central..." 
-                                class="w-80 pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200 hover:bg-white hover:border-gray-300">
+                                placeholder="Rechercher..." 
+                                class="w-full pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                         </div>
-                        <div class="flex items-center space-x-2">
-                            <img src="/public/assets/img/user_avatar.png" alt="User Avatar" class="h-8 w-8 rounded-full object-cover ring-2 ring-gray-200">
-                            <div class="hidden md:block">
-                                <p class="text-sm font-medium text-gray-700">Utilisateur</p>
-                                <p class="text-xs text-gray-500">Administrateur</p>
-                            </div>
-                        </div>
+                    </div>
+                    
+                    <!-- Menu mobile -->
+                    <div id="mobileMenu" class="hidden lg:hidden mt-4 pb-4 border-t border-gray-200">
+                        <ul class="flex flex-col space-y-3 pt-4">
+                            <li><a href="/home" class="' . self::getNavLinkClasses('/home', $currentRoute) . ' transition-colors block py-2">Tableau de bord</a></li>
+                            <li><a href="/companies" class="' . self::getNavLinkClasses('/companies', $currentRoute) . ' transition-colors block py-2">Entreprises</a></li>
+                            <li><a href="#" class="text-gray-600 hover:text-gray-800 transition-colors block py-2">Commandes</a></li>
+                            <li><a href="#" class="text-gray-600 hover:text-gray-800 transition-colors block py-2">Stock</a></li>
+                        </ul>
+                        
+                        
                     </div>
                 </nav>
             </header>';
@@ -138,8 +200,9 @@ class BaseTemplate
             ' . $main . '
             ' . $footer . '
             
-            <!-- Script du système de notifications -->
+            <!-- Scripts JavaScript -->
             <script src="/public/assets/js/notifications.js"></script>
+            <script src="/public/assets/js/mobile-menu.js"></script>
             ' . $notificationScript . '
         </body>
         </html>

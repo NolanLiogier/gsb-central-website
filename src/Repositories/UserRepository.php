@@ -6,10 +6,10 @@ use Config\Database;
 use PDO;
 
 /**
- * Classe LoginRepository
+ * Classe UserRepository
  * Gère les opérations de base de données liées à l\'authentification.
  */
-class LoginRepository
+class UserRepository
 {
     private Database $database;
 

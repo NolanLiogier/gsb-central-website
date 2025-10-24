@@ -13,7 +13,7 @@ class RenderService
     /**
      * Rend un template spécifique avec les données fournies.
      *
-     * @param string $templateName Le nom du template à rendre (ex: "Home", "Login").
+     * @param string $templateName Le nom du template à rendre (ex: "Home", "User").
      * @param array $datas Les données à passer au template.
      * @return void
      * @throws \Exception Si le template n'existe pas ou ne peut pas être rendu.
@@ -100,17 +100,17 @@ class RenderService
         // Afficher une erreur simple au lieu de rediriger pour éviter les boucles infinies
         http_response_code(500);
         echo "<!DOCTYPE html>
-<html>
-<head>
-    <title>Erreur</title>
-    <meta charset='UTF-8'>
-</head>
-<body>
-    <h1>Erreur de rendu</h1>
-    <p>Une erreur s'est produite lors du rendu de la page : " . htmlspecialchars($errorMessage) . "</p>
-    <p><a href='/login'>Retour à la connexion</a></p>
-</body>
-</html>";
+            <html>
+            <head>
+                <title>Erreur</title>
+                <meta charset='UTF-8'>
+            </head>
+            <body>
+                <h1>Erreur de rendu</h1>
+                <p>Une erreur s'est produite lors du rendu de la page : " . htmlspecialchars($errorMessage) . "</p>
+                <p><a href='/user'>Retour à la connexion</a></p>
+            </body>
+            </html>";
         exit();
     }
 }

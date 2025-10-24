@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 use App\Repositories\LoginRepository;
 use Routing\Router;
-use App\Repositories\TempTokenRepository;
 use App\Helpers\RenderService;
 use App\Helpers\StatusMessageService;
 
@@ -16,7 +15,6 @@ class LoginController
 {
     private LoginRepository $loginRepository;
     private Router $router;
-    private TempTokenRepository $tempTokenRepository;
     private RenderService $renderService;
     private StatusMessageService $statusMessageService;
 
@@ -27,7 +25,6 @@ class LoginController
     public function __construct()
     {
         $this->loginRepository = new LoginRepository();
-        $this->tempTokenRepository = new TempTokenRepository();
         $this->renderService = new RenderService();
         $this->statusMessageService = new StatusMessageService();
         $this->router = new Router();
@@ -68,15 +65,6 @@ class LoginController
 
         if (!password_verify($password, $user['password'])) {
             $this->handleResult('Mot de passe incorrect', 'error', 'Login');
-            exit;
-        }
-
-        $tokenValue = bin2hex(random_bytes(32));
-        $tokenId = $user['fk_token_id'];
-
-        $tokenUpdate = $this->tempTokenRepository->updateTokenValue($tokenId, $tokenValue);
-        if (!$tokenUpdate) {
-            $this->handleResult('Erreur lors de la mise à jour du token', 'error', 'Login');
             exit;
         }
 

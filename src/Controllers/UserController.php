@@ -59,12 +59,12 @@ class UserController
 
         $user = $this->userRepository->getUserByEmail($email);
         if (empty($user)) {
-            $this->handleResult('Utilisateur inconnu', 'error', 'Login');
+            $this->statusMessageService->displayMessageAndRedirect('Utilisateur inconnu', 'error', 'Login', $this->renderService);
             exit;
         }
 
         if (!password_verify($password, $user['password'])) {
-            $this->handleResult('Mot de passe incorrect', 'error', 'Login');
+            $this->statusMessageService->displayMessageAndRedirect('Mot de passe incorrect', 'error', 'Login', $this->renderService);
             exit;
         }
 
@@ -79,15 +79,4 @@ class UserController
         exit;
     }
 
-    public function handleResult($message, $typeMessage, $route): void
-    {
-        match ($typeMessage) {
-            'success' => $this->statusMessageService->setSuccessMessage($message),
-            'error' => $this->statusMessageService->setErrorMessage($message),
-            'warning' => $this->statusMessageService->setWarningMessage($message),
-            default => throw new \Exception('Type de message invalide'),
-        };
-        $this->renderService->render($route);
-        exit();
-    }
 }

@@ -55,17 +55,20 @@ HTML;
                 $salesmanName = 'Non assigné';
             }
             
+            // Conversion du nom de l'entreprise en majuscules
+            $companyNameUpper = strtoupper($company['company_name']);
+            
             $companiesContent .= <<<HTML
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
-                                {$company['company_name']}
+                                {$companyNameUpper}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <a href="#" class="text-sm text-blue-600 hover:text-blue-800 hover:underline">
+                            <div class="text-sm text-gray-900">
                                 {$company['sector_name']}
-                            </a>
+                            </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">

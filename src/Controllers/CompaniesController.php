@@ -31,9 +31,12 @@ class CompaniesController {
      */
     public function index(?array $datas = null): void {
         $this->authenticationService->verifyAuthentication();
+        
+        if (!empty($datas) && isset($datas['companyId'])) {
+            $this->renderModifyCompany($datas['companyId']);
+            exit;
+        }
 
-        
-        
         $datas = $this->companiesRepository->getCompanies();
         $this->renderService->displayTemplates("Companies", $datas);
         exit;
@@ -49,6 +52,7 @@ class CompaniesController {
         $datas = $this->companiesRepository->getCompanyData($companyId);
         $datas['sectors'] = $this->companiesRepository->getSectors();
         $datas['salesmen'] = $this->companiesRepository->getSalesmen();
+        
         $this->renderService->displayTemplates("ModifyCompany", $datas, "Modifier l'entreprise");
         exit;
     }

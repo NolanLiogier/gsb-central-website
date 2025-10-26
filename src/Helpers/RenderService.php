@@ -63,11 +63,12 @@ class RenderService
             throw new \Exception("Template method not found: " . $methodName);
         }
 
-        if (!is_callable([$className, $methodName])) {
+        $templateInstance = new $className();
+        if (!is_callable([$templateInstance, $methodName])) {
             throw new \Exception("Template method not callable: " . $methodName);
         }
 
-        $result = $className::$methodName($datas);
+        $result = $templateInstance->$methodName($datas);
         
         if (!is_string($result)) {
             throw new \Exception("Template method must return a string");

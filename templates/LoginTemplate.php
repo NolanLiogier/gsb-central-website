@@ -14,7 +14,7 @@ class LoginTemplate
      * @param array $datas Les données à passer au template.
      * @return string Le contenu HTML de la page.
      */
-    public static function displayLogin(array $datas = []): string
+    public function displayLogin(array $datas = []): string
     {
         $loginContent = <<<HTML
             <div class="min-h-screen flex items-center justify-center bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">

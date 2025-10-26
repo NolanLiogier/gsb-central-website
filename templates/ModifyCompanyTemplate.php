@@ -13,21 +13,19 @@ class ModifyCompanyTemplate {
      * @param array $datas Données contenant companyData, sectors, salesmen et errors.
      * @return string The full HTML page.
      */
-    public static function displayModifyCompany(array $datas = []): string {
-        // Extraction claire de toutes les données nécessaires
-        $companyId = $datas['companyId'] ?? 0;
-        $companyData = $datas['companyData'] ?? [];
+    public function displayModifyCompany(array $datas = []): string {
+        // Extraction des données nécessaires directement depuis $datas
         $sectors = $datas['sectors'] ?? [];
         $salesmen = $datas['salesmen'] ?? [];
 
         // Extraction des données de l'entreprise avec valeurs par défaut
-        $companyName = $companyData['name'] ?? '';
-        $siret = $companyData['siret'] ?? '';
-        $siren = $companyData['siren'] ?? '';
-        $companyIdValue = $companyData['company_id'] ?? $companyId;
+        $companyName = $datas['company_name'] ?? '';
+        $siret = $datas['siret'] ?? '';
+        $siren = $datas['siren'] ?? '';
+        $companyIdValue = $datas['company_id'] ?? 0;
 
-        $sectorOptions = self::generateSectorOptions($sectors, $companyData['sector_id'] ?? null);
-        $salesmanOptions = self::generateSalesmanOptions($salesmen, $companyData['user_id'] ?? null);
+        $sectorOptions = $this->generateSectorOptions($sectors, $datas['selected_sector_id'] ?? null);
+        $salesmanOptions = $this->generateSalesmanOptions($salesmen, $datas['selected_salesman_id'] ?? null);
 
         $modifyCompanyContent = <<<HTML
         <!-- En-tête de la page -->
@@ -172,13 +170,14 @@ HTML;
      * @param int|null $selectedSectorId ID du secteur sélectionné
      * @return string Options HTML générées
      */
-    private static function generateSectorOptions(array $sectors, ?int $selectedSectorId = null): string {
+    private function generateSectorOptions(array $sectors, ?int $selectedSectorId = null): string {
         $options = '<option value="">Sélectionnez un secteur</option>';
         
         foreach ($sectors as $sector) {
-            $sectorId = htmlspecialchars($sector['id']);
-            $sectorName = htmlspecialchars($sector['name']);
-            $options .= "<option value=\"{$sectorId}\" {$selectedSectorId}>{$sectorName}</option>";
+            $sectorId = htmlspecialchars($sector['sector_id']);
+            $sectorName = htmlspecialchars($sector['sector_name']);
+            $selected = ($selectedSectorId !== null && $sectorId == $selectedSectorId) ? 'selected' : '';
+            $options .= "<option value=\"{$sectorId}\" {$selected}>{$sectorName}</option>";
         }
         
         return $options;
@@ -191,13 +190,14 @@ HTML;
      * @param int|null $selectedSalesmanId ID du commercial sélectionné
      * @return string Options HTML générées
      */
-    private static function generateSalesmanOptions(array $salesmen, ?int $selectedSalesmanId = null): string {
+    private function generateSalesmanOptions(array $salesmen, ?int $selectedSalesmanId = null): string {
         $options = '<option value="">Aucun commercial assigné</option>';
         
         foreach ($salesmen as $salesman) {
-            $salesmanId = htmlspecialchars($salesman['id']);
-            $salesmanName = htmlspecialchars($salesman['firstname'] . ' ' . $salesman['lastname']);
-            $options .= "<option value=\"{$salesmanId}\" {$selectedSalesmanId}>{$salesmanName}</option>";
+            $salesmanId = htmlspecialchars($salesman['salesman_id']);
+            $salesmanName = htmlspecialchars($salesman['salesman_firstname'] . ' ' . $salesman['salesman_lastname']);
+            $selected = ($selectedSalesmanId !== null && $salesmanId == $selectedSalesmanId) ? 'selected' : '';
+            $options .= "<option value=\"{$salesmanId}\" {$selected}>{$salesmanName}</option>";
         }
         
         return $options;
@@ -209,7 +209,7 @@ HTML;
      * @param array $errors Liste des erreurs à afficher
      * @return string Messages d'erreur HTML générés
      */
-    private static function generateErrorMessages(array $errors): string {
+    private function generateErrorMessages(array $errors): string {
         if (empty($errors)) {
             return '';
         }

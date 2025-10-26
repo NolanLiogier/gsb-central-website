@@ -86,8 +86,8 @@ class CompaniesRepository {
             }
 
             $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, 
-                             s.sector_id, s.sector_name,
-                             u.user_id, u.firstname, u.lastname
+                             s.sector_id as selected_sector_id, s.sector_name as selected_sector_name,
+                             u.user_id as selected_salesman_id, u.firstname as selected_salesman_firstname, u.lastname as selected_salesman_lastname
                       FROM companies c 
                       INNER JOIN sectors s ON c.fk_sector_id = s.sector_id 
                       INNER JOIN users u ON c.fk_salesman_id = u.user_id
@@ -117,7 +117,7 @@ class CompaniesRepository {
                 return [];
             }
 
-            $query = "SELECT sector_id as id, sector_name as name FROM sectors ORDER BY sector_name";
+            $query = "SELECT sector_id, sector_name FROM sectors ORDER BY sector_name";
             $stmt = $this->connection->prepare($query);
             $stmt->execute();
             
@@ -139,10 +139,10 @@ class CompaniesRepository {
                 return [];
             }
 
-            $query = "SELECT user_id as id, firstname, lastname 
-                      FROM users 
-                      WHERE fk_function_id = 1
-                      ORDER BY lastname, firstname";
+            $query = "SELECT user_id as salesman_id, firstname as salesman_firstname, lastname as salesman_lastname 
+                      FROM users u
+                      WHERE u.fk_function_id = 1
+                      ORDER BY u.lastname, u.firstname";
             $stmt = $this->connection->prepare($query);
             $stmt->execute();
             

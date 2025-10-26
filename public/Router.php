@@ -49,10 +49,12 @@ class Router {
             session_start();
         }
 
-        $specialRoutes = ['modify-company'];
-        foreach ($specialRoutes as $specialRoute) {
-            if (str_contains($route, $specialRoute)) {
-                $datas = $this->handleSpecialRoute($route, $datas);
+        $specialRoutes = ['/modify-company'];
+        if (in_array($route, $specialRoutes)) {
+            $datas = $this->handleSpecialRoute($route, $datas);
+
+            if (empty($datas)) {
+                $route = '/not-found';
             }
         }
 
@@ -62,6 +64,7 @@ class Router {
             '/home' => new HomeController(),
             '/companies' => new CompaniesController(),
             '/modify-company' => new CompaniesController(),
+            '/not-found' => new NotFoundController(),
             //'/orders' => new OrdersController(),
             //'/stock' => new StockController(),
             default => new NotFoundController(),
@@ -72,17 +75,9 @@ class Router {
 
     public function handleSpecialRoute(string $route, ?array $datas): array {
         $datas = $datas ?? [];
-        $explodedRoute = explode('/', $route);
-        $additionalData = (int)end($explodedRoute);
 
-        if (empty($additionalData) || !is_numeric($additionalData)) {
-            $notFoundController = new NotFoundController();
-            $notFoundController->index();
-            exit;
-        }
-
-        if (str_contains($route, 'modify-company')) {
-            $datas['companyId'] = $additionalData;
+        if ($route === '/modify-company' && isset($_POST['companyId'])) {
+            $datas['companyId'] = $_POST['companyId'];
         }
 
         return $datas;

@@ -13,7 +13,7 @@ class CompaniesTemplate {
      * @param array $datas Données à utiliser pour le template.
      * @return string The full HTML page.
      */
-    public static function displayCompanies($datas): string {
+    public function displayCompanies($datas): string {
         $companiesContent = <<<HTML
         <!-- Titre de la page et bouton d'ajout -->
         <div class="mb-8 flex justify-between items-center">
@@ -55,7 +55,7 @@ class CompaniesTemplate {
             $companyNameUpper = strtoupper($company['company_name']);
             
             $companiesContent .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location.href='/modify-company/{$company['company_id']}'">
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$company['company_id']}')">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
                                 {$companyNameUpper}
@@ -79,6 +79,17 @@ class CompaniesTemplate {
                 </tbody>
             </table>
         </div>
+
+        <form action="/modify-company" method="POST" id="company-form">
+            <input type="hidden" name="companyId" id="companyId" value="0" required>
+        </form>
+
+        <script>
+            function submitForm(companyId) {
+                document.getElementById('companyId').value = companyId;
+                document.getElementById('company-form').submit();
+            }
+        </script>
 
         HTML;
 

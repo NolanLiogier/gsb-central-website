@@ -13,7 +13,7 @@ class HomeTemplate {
      * @param array $datas Données à utiliser pour le template.
      * @return string The full HTML page.
      */
-    public static function displayHome($datas): string {
+    public function displayHome($datas): string {
         $homeContent = <<<HTML
             <h1 class="text-3xl font-bold text-gray-800">{$datas['message']}</h1>
         HTML;

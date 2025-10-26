@@ -33,16 +33,17 @@ class UserController
     /**
      * Gère la logique d'affichage et de traitement du formulaire de connexion.
      *
+     * @param array|null $datas Données optionnelles à passer au contrôleur.
      * @return void
      */
-    public function index(): void
+    public function index(?array $datas = null): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['password'])) {
             $this->login();
             exit;
         }
         else {
-            $this->renderService->render("Login");
+            $this->renderService->displayTemplates("Login", [], "Connexion");
             exit;
         }
     }

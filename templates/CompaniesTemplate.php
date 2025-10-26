@@ -2,8 +2,6 @@
 
 namespace Templates;
 
-use Templates\BaseTemplate;
-
 /**
  * Classe CompanyTemplate
  * Gère l'affichage du template de la page des entreprises.
@@ -43,23 +41,21 @@ class CompaniesTemplate {
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
-HTML;
+        HTML;
 
         // Génération des lignes du tableau avec les données des entreprises
         foreach ($datas['companies'] as $company) {
             // Construction du nom du commercial
-            $salesmanName = '';
+            $salesmanName = 'Non assigné';
             if (!empty($company['firstname']) && !empty($company['lastname'])) {
                 $salesmanName = ucfirst($company['firstname']) . ' ' . ucfirst($company['lastname']);
-            } else {
-                $salesmanName = 'Non assigné';
             }
             
             // Conversion du nom de l'entreprise en majuscules
             $companyNameUpper = strtoupper($company['company_name']);
             
             $companiesContent .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors">
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="window.location.href='/modify-company/{$company['company_id']}'">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
                                 {$companyNameUpper}
@@ -76,7 +72,7 @@ HTML;
                             </div>
                         </td>
                     </tr>
-HTML;
+                HTML;
         }
 
         $companiesContent .= <<<HTML
@@ -84,8 +80,8 @@ HTML;
             </table>
         </div>
 
-HTML;
+        HTML;
 
-        return BaseTemplate::render('Entreprises - GSB Central', $companiesContent, '/companies');
+        return $companiesContent;
     }
 }

@@ -21,11 +21,12 @@ class NotFoundController
     /**
      * Affiche la page 404.
      *
+     * @param array|null $datas Données optionnelles à passer au contrôleur.
      * @return void
      */
-    public function index(): void
+    public function index(?array $datas = null): void
     {
-        $this->renderService->render('NotFound');
+        $this->renderService->displayTemplates('NotFound', [], "404 Not Found");
         exit();
     }
 }

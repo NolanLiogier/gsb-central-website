@@ -42,6 +42,6 @@ class LoginTemplate
             </div>
         HTML;
 
-        return BaseTemplate::render('Connexion - GSB', $loginContent, '/user');
+        return $loginContent;
     }
 }

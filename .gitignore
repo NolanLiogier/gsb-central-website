@@ -6,4 +6,7 @@
 *.log
 docker-compose.yml
 Dockerfile
+.dockerignore
 .env
+.env.local
+

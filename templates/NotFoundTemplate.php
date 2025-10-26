@@ -2,8 +2,6 @@
 
 namespace Templates;
 
-use Templates\BaseTemplate;
-
 /**
  * Template pour la page d'erreur 404
  * Affiche une page d'erreur élégante quand une ressource n'est pas trouvée
@@ -12,13 +10,12 @@ class NotFoundTemplate
 {
     /**
      * Génère le contenu HTML de la page 404 avec un design moderne
-     * @param array $datas - Données optionnelles (non utilisées)
      * @return string - HTML complet de la page 404
      */
-    public static function displayNotFound(array $datas = []): string
+    public static function displayNotFound(): string
     {
         // Construction du contenu HTML de la page 404 avec le style du dashboard
-        $content = '
+        $notFoundContent = <<<HTML
         <div class="min-h-screen bg-gray-100 flex items-center justify-center">
             <div class="max-w-lg w-full mx-4">
                 <!-- Card principale avec le style du dashboard -->
@@ -75,8 +72,9 @@ class NotFoundTemplate
                     </p>
                 </div>
             </div>
-        </div>';
+        </div>
+HTML;
 
-        return BaseTemplate::render(title: '404 Not Found', content: $content);
+        return $notFoundContent;
     }
 }

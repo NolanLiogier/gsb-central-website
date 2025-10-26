@@ -3,6 +3,7 @@
 namespace App\Helpers;
 
 use Routing\Router;
+use Templates\BaseTemplate;
 
 /**
  * Classe RenderService
@@ -10,6 +11,13 @@ use Routing\Router;
  */
 class RenderService
 {
+
+    private BaseTemplate $baseTemplate;
+
+    public function __construct()
+    {
+        $this->baseTemplate = new BaseTemplate();
+    }
     /**
      * Rend un template spécifique avec les données fournies.
      *
@@ -18,28 +26,19 @@ class RenderService
      * @return void
      * @throws \Exception Si le template n'existe pas ou ne peut pas être rendu.
      */
-    public function render(string $templateName, array $datas = []): void
+    public function displayTemplates(string $templateName, array $datas = [], string $templateTitle = ''): void
     {
         try {
-            $this->validateTemplateName($templateName);
-            $html = $this->renderTemplate($templateName, $datas);
-            $this->outputHtml($html);
+            if (empty($templateName) || !preg_match('/^[a-zA-Z][a-zA-Z0-9]*$/', $templateName)) {
+                throw new \Exception("Invalid template name: " . $templateName);
+            }
+
+            $content = $this->getTemplateContent($templateName, $datas);
+            echo $this->baseTemplate->render( $templateTitle,  $content,  '/' . $templateName);
+            exit();
+
         } catch (\Exception $e) {
             $this->handleRenderError($e->getMessage());
-        }
-    }
-
-    /**
-     * Valide le nom du template.
-     *
-     * @param string $templateName Le nom du template à valider.
-     * @return void
-     * @throws \Exception Si le nom du template est invalide.
-     */
-    private function validateTemplateName(string $templateName): void
-    {
-        if (empty($templateName) || !preg_match('/^[a-zA-Z][a-zA-Z0-9]*$/', $templateName)) {
-            throw new \Exception("Invalid template name: " . $templateName);
         }
     }
 
@@ -51,7 +50,7 @@ class RenderService
      * @return string Le HTML rendu.
      * @throws \Exception Si le template ne peut pas être rendu.
      */
-    private function renderTemplate(string $templateName, array $datas): string
+    private function getTemplateContent(string $templateName, array $datas): string
     {
         $className = 'Templates\\' . ucfirst($templateName) . 'Template';
         $methodName = 'display' . ucfirst($templateName);
@@ -75,18 +74,6 @@ class RenderService
         }
 
         return $result;
-    }
-
-    /**
-     * Affiche le HTML rendu.
-     *
-     * @param string $html Le HTML à afficher.
-     * @return void
-     */
-    private function outputHtml(string $html): void
-    {
-        echo $html;
-        exit();
     }
 
     /**

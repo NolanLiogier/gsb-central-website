@@ -48,7 +48,7 @@ class StatusMessageService
             'warning' => $this->setWarningMessage($message),
             default => throw new \Exception('Type de message invalide'),
         };
-        $renderService->render($route);
+        $renderService->displayTemplates($route);
         exit();
     }
 }

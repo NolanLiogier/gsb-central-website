@@ -27,22 +27,10 @@ class HomeController {
      *
      * @return void
      */
-    public function index(): void {
+    public function index(?array $datas = null): void {
         $this->authenticationService->verifyAuthentication();        
         $datas = $this->homeRepository->getDatas();
-        $this->displayHome($datas);
+        $this->renderService->displayTemplates("Home", $datas, "Accueil");
         exit;
-    }
-
-    /**
-     * Affiche la vue de la page d\'accueil.
-     *
-     * @param array $datas Données à passer à la vue.
-     * @return void
-     */
-    public function displayHome($datas = []): void
-    {
-        $this->renderService->render("Home", $datas);
-        exit();
     }
 }

@@ -5,6 +5,7 @@ namespace Routing;
 use App\Controllers\UserController;
 use App\Controllers\HomeController;
 use App\Controllers\CompaniesController;
+use App\Controllers\StockController;
 use App\Controllers\NotFoundController;
 use Dotenv\Dotenv;
 
@@ -74,9 +75,10 @@ class Router {
             '/home' => new HomeController(),
             '/companies' => new CompaniesController(),
             '/modify-company' => new CompaniesController(),
+            '/stock' => new StockController(),
+            '/modify-stock' => new StockController(),
             '/not-found' => new NotFoundController(),
             //'/orders' => new OrdersController(),
-            //'/stock' => new StockController(),
             default => new NotFoundController(),
         };
 

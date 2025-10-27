@@ -74,7 +74,7 @@ class BaseTemplate
                             <li><a href="/home" class="{$homeNavClasses} transition-colors">Tableau de bord</a></li>
                             <li><a href="/companies" class="{$companiesNavClasses} transition-colors">Entreprises</a></li>
                             <li><a href="#" class="{$ordersNavClasses} transition-colors">Commandes</a></li>
-                            <li><a href="#" class="{$stockNavClasses} transition-colors">Stock</a></li>
+                            <li><a href="/stock" class="{$stockNavClasses} transition-colors">Stock</a></li>
                         </ul>
                         
                         <!-- Zone recherche desktop -->
@@ -131,7 +131,7 @@ class BaseTemplate
                             <li><a href="/home" class="{$homeNavClasses} transition-colors block py-2">Tableau de bord</a></li>
                             <li><a href="/companies" class="{$companiesNavClasses} transition-colors block py-2">Entreprises</a></li>
                             <li><a href="#" class="{$ordersNavClasses} transition-colors block py-2">Commandes</a></li>
-                            <li><a href="#" class="{$stockNavClasses} transition-colors block py-2">Stock</a></li>
+                            <li><a href="/stock" class="{$stockNavClasses} transition-colors block py-2">Stock</a></li>
                         </ul>
                     </div>
                 </nav>
@@ -289,6 +289,7 @@ class BaseTemplate
             <!-- Scripts JavaScript -->
             <script src="/public/assets/js/notifications.js"></script>
             <script src="/public/assets/js/mobile-menu.js"></script>
+            <script src="/public/assets/js/stock-price-formatter.js"></script>
             {$notificationScript}
         </body>
         </html>

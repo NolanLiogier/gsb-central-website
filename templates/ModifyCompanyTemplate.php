@@ -176,19 +176,41 @@ class ModifyCompanyTemplate {
                             <label for="salesman" class="block text-sm font-semibold text-gray-700 mb-3">
                                 Commercial assigné
                             </label>
+        HTML;
+        
+        // Ajout du select commercial avec les bons attributs selon le type d'utilisateur
+        if ($isClient) {
+            $modifyCompanyContent .= <<<HTML
+                            <select 
+                                id="salesman" 
+                                name="salesman" 
+                                disabled
+                                class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 cursor-not-allowed" 
+                                style="pointer-events: none;">
+                                {$salesmanOptions}
+                            </select>
+                            <p class="text-xs text-gray-500 mt-2">Vous ne pouvez pas modifier votre commercial assigné</p>
+        HTML;
+        } 
+        else {
+            $modifyCompanyContent .= <<<HTML
                             <select 
                                 id="salesman" 
                                 name="salesman" 
                                 class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900">
                                 {$salesmanOptions}
                             </select>
+        HTML;
+        }
+        
+        $modifyCompanyContent .= <<<HTML
                         </div>
                     </div>
                 </div>
 
                 <!-- Boutons d'action -->
                 <div class="flex justify-end space-x-4 pt-8 mt-8 border-t border-gray-200">
-HTML;
+        HTML;
 
         // Affichage du bouton Retour uniquement si ce n'est pas un client
         $returnButtonHtml = '';

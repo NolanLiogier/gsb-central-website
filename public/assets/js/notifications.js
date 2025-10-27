@@ -21,7 +21,8 @@ function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     const bgColor = type === 'success' ? 'bg-green-500' : 
                    type === 'warning' ? 'bg-yellow-500' : 
-                   type === 'danger' ? 'bg-red-500' : 'bg-blue-500';
+                   type === 'danger' ? 'bg-red-500' : 
+                   'bg-blue-500';
     
     notification.className = `w-80 p-4 rounded-lg text-white shadow-lg ${bgColor}`;
     notification.innerHTML = `

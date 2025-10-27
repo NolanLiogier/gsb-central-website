@@ -115,6 +115,7 @@ class UserController
         // Stockage des informations utilisateur dans la session pour l'authentification ultérieure
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_role'] = $user['function_name'];
+        $_SESSION['user_function_id'] = $user['fk_function_id'];
         $_SESSION['user_firstname'] = $user['firstname'];
         $_SESSION['user_lastname'] = $user['lastname'];
         

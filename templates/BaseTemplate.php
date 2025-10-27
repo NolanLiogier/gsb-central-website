@@ -39,23 +39,81 @@ class BaseTemplate
     }
 
     /**
+     * Détermine si un élément de menu doit être affiché selon le rôle de l'utilisateur.
+     * 
+     * Vérifie les permissions d'affichage selon le rôle :
+     * - Commercial ou Client : affiche entreprises et commandes
+     * - Logisticien : affiche commandes et stock
+     * 
+     * @param string $menuItem L'élément de menu à vérifier ('companies', 'orders', 'stock').
+     * @return bool True si l'élément doit être affiché, false sinon.
+     */
+    private function shouldShowMenuItem(string $menuItem): bool
+    {
+        // Démarre la session si elle n'est pas déjà active
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        // Si l'utilisateur n'a pas de function_id, ne rien afficher
+        if (!isset($_SESSION['user_function_id'])) {
+            return false;
+        }
+
+        $userFunctionId = (int)$_SESSION['user_function_id'];
+
+        // Commercial ou Client : accès aux entreprises et commandes
+        if ($userFunctionId == 1 || $userFunctionId == 2) {
+            return in_array($menuItem, ['companies', 'orders']);
+        }
+
+        // Logisticien : accès aux commandes et stock
+        if ($userFunctionId == 3) {
+            return in_array($menuItem, ['orders', 'stock']);
+        }
+
+        return false;
+    }
+
+    /**
      * Génère le header HTML avec navigation responsive et barre de recherche.
      * 
      * Crée l'en-tête de navigation avec deux versions : desktop (visible sur écrans larges)
      * et mobile (menu hamburger). Détermine les classes CSS actives pour les liens de
      * navigation. Inclut le logo GSB Central, les liens de navigation, et la barre de recherche.
+     * Masque les éléments de menu selon les permissions de l'utilisateur.
      * 
      * @param string $currentRoute Route actuelle pour déterminer l'état actif des liens.
      * @return string HTML complet du header avec navigation responsive.
      */
     private function getHeader(string $currentRoute): string
     {
+        // Démarre la session si elle n'est pas déjà active
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+
         // Génération des classes CSS dynamiques pour chaque lien selon son état actif
         // Permet de mettre en évidence visuellement la page courante
         $homeNavClasses = $this->getNavLinkClasses(['/Home'], $currentRoute);
         $companiesNavClasses = $this->getNavLinkClasses(['/Companies', '/ModifyCompany'], $currentRoute);
         $ordersNavClasses = $this->getNavLinkClasses(['/Orders'], $currentRoute);
         $stockNavClasses = $this->getNavLinkClasses(['/Stock'], $currentRoute);
+
+        // Détermine quels éléments de menu afficher selon le rôle de l'utilisateur
+        $showCompanies = $this->shouldShowMenuItem('companies');
+        $showOrders = $this->shouldShowMenuItem('orders');
+        $showStock = $this->shouldShowMenuItem('stock');
+
+        // Génération des éléments de menu desktop selon les permissions
+        $companiesMenuItem = $showCompanies ? "<li><a href=\"/companies\" class=\"{$companiesNavClasses} transition-colors\">Entreprises</a></li>" : "";
+        $ordersMenuItem = $showOrders ? "<li><a href=\"#\" class=\"{$ordersNavClasses} transition-colors\">Commandes</a></li>" : "";
+        $stockMenuItem = $showStock ? "<li><a href=\"/stock\" class=\"{$stockNavClasses} transition-colors\">Stock</a></li>" : "";
+
+        // Génération des éléments de menu mobile selon les permissions
+        $companiesMobileItem = $showCompanies ? "<li><a href=\"/companies\" class=\"{$companiesNavClasses} transition-colors block py-2\">Entreprises</a></li>" : "";
+        $ordersMobileItem = $showOrders ? "<li><a href=\"#\" class=\"{$ordersNavClasses} transition-colors block py-2\">Commandes</a></li>" : "";
+        $stockMobileItem = $showStock ? "<li><a href=\"/stock\" class=\"{$stockNavClasses} transition-colors block py-2\">Stock</a></li>" : "";
 
         return <<<HTML
             <header class="bg-white shadow-sm">
@@ -72,9 +130,9 @@ class BaseTemplate
                         <!-- Navigation desktop -->
                         <ul class="hidden lg:flex space-x-6">
                             <li><a href="/home" class="{$homeNavClasses} transition-colors">Tableau de bord</a></li>
-                            <li><a href="/companies" class="{$companiesNavClasses} transition-colors">Entreprises</a></li>
-                            <li><a href="#" class="{$ordersNavClasses} transition-colors">Commandes</a></li>
-                            <li><a href="/stock" class="{$stockNavClasses} transition-colors">Stock</a></li>
+                            {$companiesMenuItem}
+                            {$ordersMenuItem}
+                            {$stockMenuItem}
                         </ul>
                         
                         <!-- Zone recherche desktop -->
@@ -129,9 +187,9 @@ class BaseTemplate
                     <div id="mobileMenu" class="hidden lg:hidden mt-4 pb-4 border-t border-gray-200">
                         <ul class="flex flex-col space-y-3 pt-4">
                             <li><a href="/home" class="{$homeNavClasses} transition-colors block py-2">Tableau de bord</a></li>
-                            <li><a href="/companies" class="{$companiesNavClasses} transition-colors block py-2">Entreprises</a></li>
-                            <li><a href="#" class="{$ordersNavClasses} transition-colors block py-2">Commandes</a></li>
-                            <li><a href="/stock" class="{$stockNavClasses} transition-colors block py-2">Stock</a></li>
+                            {$companiesMobileItem}
+                            {$ordersMobileItem}
+                            {$stockMobileItem}
                         </ul>
                     </div>
                 </nav>

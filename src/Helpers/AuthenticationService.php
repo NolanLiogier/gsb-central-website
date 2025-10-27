@@ -53,8 +53,9 @@ class AuthenticationService
      * Détermine si l'utilisateur est actuellement authentifié.
      * 
      * Un utilisateur est considéré comme authentifié s'il possède à la fois
-     * un email et un rôle dans la session, et que ces valeurs ne sont pas vides.
-     * Cette vérification empêche les sessions partiellement corrompues.
+     * un email, un rôle et un function_id dans la session, et que ces valeurs ne sont pas vides.
+     * Cette vérification empêche les sessions partiellement corrompues et garantit
+     * la présence des informations nécessaires pour la gestion des permissions.
      *
      * @return bool True si l'utilisateur est connecté, false sinon.
      */
@@ -63,7 +64,9 @@ class AuthenticationService
         // Vérification de la présence ET de la non-vacuité des variables de session essentielles
         return isset($_SESSION['user_email']) && 
                isset($_SESSION['user_role']) && 
+               isset($_SESSION['user_function_id']) &&
                !empty($_SESSION['user_email']) && 
-               !empty($_SESSION['user_role']);
+               !empty($_SESSION['user_role']) &&
+               !empty($_SESSION['user_function_id']);
     }
 }

@@ -50,8 +50,8 @@ class ModifyCompanyTemplate {
             
             <form class="p-8" method="POST" action="/modify-company">
                 <!-- Champ caché pour l'ID de l'entreprise -->
-                <input type="hidden" name="company_id" value="{$companyIdValue}">
-                
+                <input type="hidden" name="companyId" value="{$companyIdValue}">
+                <input type="hidden" name="updateCompany" value="true">
                 <!-- Grille des champs du formulaire -->
                 <div class="space-y-6">
                     <!-- Nom de l'entreprise -->
@@ -66,8 +66,7 @@ class ModifyCompanyTemplate {
                             value="{$companyName}"
                             required
                             class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
-                            placeholder="Entrez le nom de l'entreprise"
-                        >
+                            placeholder="Entrez le nom de l'entreprise">
                     </div>
 
                     <!-- Grille pour SIRET et SIREN -->
@@ -86,8 +85,7 @@ class ModifyCompanyTemplate {
                                 pattern="[0-9]{14}"
                                 maxlength="14"
                                 class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
-                                placeholder="12345678901234"
-                            >
+                                placeholder="12345678901234">
                             <p class="text-xs text-gray-500 mt-2">Le SIRET doit contenir exactement 14 chiffres</p>
                         </div>
 
@@ -105,8 +103,7 @@ class ModifyCompanyTemplate {
                                 pattern="[0-9]{9}"
                                 maxlength="9"
                                 class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
-                                placeholder="123456789"
-                            >
+                                placeholder="123456789">
                             <p class="text-xs text-gray-500 mt-2">Le SIREN doit contenir exactement 9 chiffres</p>
                         </div>
                     </div>
@@ -122,8 +119,7 @@ class ModifyCompanyTemplate {
                                 id="sector" 
                                 name="sector" 
                                 required
-                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900"
-                            >
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900">
                                 {$sectorOptions}
                             </select>
                         </div>
@@ -136,8 +132,7 @@ class ModifyCompanyTemplate {
                             <select 
                                 id="salesman" 
                                 name="salesman" 
-                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900"
-                            >
+                                class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900">
                                 {$salesmanOptions}
                             </select>
                         </div>
@@ -151,14 +146,13 @@ class ModifyCompanyTemplate {
                     </a>
                     <button 
                         type="submit" 
-                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm"
-                    >
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm">
                         Enregistrer les modifications
                     </button>
                 </div>
             </form>
         </div>
-HTML;
+    HTML;
 
         return $modifyCompanyContent;
     }

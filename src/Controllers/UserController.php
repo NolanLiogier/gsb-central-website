@@ -33,10 +33,9 @@ class UserController
     /**
      * Gère la logique d'affichage et de traitement du formulaire de connexion.
      *
-     * @param array|null $datas Données optionnelles à passer au contrôleur.
-     * @return void
+    * @return void
      */
-    public function index(?array $datas = null): void
+    public function index(): void
     {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['password'])) {
             $this->login();
@@ -60,16 +59,18 @@ class UserController
 
         $user = $this->userRepository->getUserByEmail($email);
         if (empty($user)) {
-            $this->statusMessageService->displayMessageAndRedirect('Utilisateur inconnu', 'error', 'Login', $this->renderService);
+            $this->statusMessageService->setMessage('Utilisateur inconnu', 'error');
+            $this->router->getRoute('/user');
             exit;
         }
 
         if (!password_verify($password, $user['password'])) {
-            $this->statusMessageService->displayMessageAndRedirect('Mot de passe incorrect', 'error', 'Login', $this->renderService);
+            $this->statusMessageService->setMessage('Mot de passe incorrect', 'error');
+            $this->router->getRoute('/user');
             exit;
         }
 
-        $this->statusMessageService->setSuccessMessage('Connexion réussie');
+        $this->statusMessageService->setMessage('Connexion réussie', 'success');
         
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_role'] = $user['function_name'];

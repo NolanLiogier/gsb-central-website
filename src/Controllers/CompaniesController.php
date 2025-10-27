@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Repositories\CompaniesRepository;
 use App\Helpers\RenderService;
 use App\Helpers\AuthenticationService;
+use Routing\Router;
+use App\Helpers\StatusMessageService;
 
 /**
  * Classe CompaniesController
@@ -14,29 +16,39 @@ class CompaniesController {
     private CompaniesRepository $companiesRepository;
     private RenderService $renderService;
     private AuthenticationService $authenticationService;
+    private StatusMessageService $statusMessageService;
+    private Router $router;
 
     public function __construct()
     {
         $this->companiesRepository = new CompaniesRepository();
         $this->renderService = new RenderService();
         $this->authenticationService = new AuthenticationService();
+        $this->statusMessageService = new StatusMessageService();
+        $this->router = new Router();
     }
 
     /**
      * Affiche la page des entreprises avec les données récupérées.
      * Vérifie d'abord que l'utilisateur est authentifié.
      *
-     * @param array|null $datas Données optionnelles à passer au contrôleur.
      * @return void
      */
-    public function index(?array $datas = null): void {
+    public function index(): void {
         $this->authenticationService->verifyAuthentication();
-        
-        if (!empty($datas) && isset($datas['companyId'])) {
-            $this->renderModifyCompany($datas['companyId']);
-            exit;
-        }
 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (isset($_POST['companyId']) && isset($_POST['renderModifyCompany'])) {
+                $this->renderModifyCompany((int)$_POST['companyId']);
+                exit;
+            }
+
+            if (isset($_POST['companyId']) && isset($_POST['updateCompany'])) {
+                $this->updateCompany($_POST);
+                exit;
+            }
+        }
+        
         $datas = $this->companiesRepository->getCompanies();
         $this->renderService->displayTemplates("Companies", $datas);
         exit;
@@ -63,32 +75,26 @@ class CompaniesController {
      *
      * @return void
      */
-    public function updateCompany(): void {
-        $this->authenticationService->verifyAuthentication();
-        
-        // Vérification que la requête est en POST
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->renderService->displayTemplates("Companies", [], "Entreprises");
-            return;
-        }
-
+    public function updateCompany(array $datas): void {
         // Récupération et validation des données du formulaire
         $companyData = [
-            'company_id' => $_POST['company_id'] ?? '',
-            'company_name' => trim($_POST['companyName'] ?? ''),
-            'siret' => trim($_POST['siret'] ?? ''),
-            'siren' => trim($_POST['siren'] ?? ''),
-            'sector' => $_POST['sector'] ?? '',
-            'salesman' => $_POST['salesman'] ?? ''
+            'company_id' => $datas['companyId'] ?? '',
+            'company_name' => trim($datas['companyName'] ?? ''),
+            'siret' => trim($datas['siret'] ?? ''),
+            'siren' => trim($datas['siren'] ?? ''),
+            'sector' => $datas['sector'] ?? '',
+            'salesman' => $datas['salesman'] ?? ''
         ];
 
         $updateStatus = $this->companiesRepository->updateCompany($companyData);
         if (!$updateStatus) {
-            $this->renderService->displayTemplates("Companies", ['errors' => ['Une erreur est survenue lors de la mise à jour.']], "Entreprises");
+            $this->statusMessageService->setMessage('Une erreur est survenue lors de la mise à jour.', 'error');
+            $this->renderService->displayTemplates("Companies", $companyData, "Entreprises");
             exit;
         } 
-            
-        $this->renderService->displayTemplates("Companies", ['success' => 'Les informations de l\'entreprise ont été mises à jour avec succès.'], "Entreprises");
+
+        $this->statusMessageService->setMessage('Les informations de l\'entreprise ont été mises à jour avec succès.', 'success');
+        $this->router->getRoute('/companies');
         exit;
     }
 }

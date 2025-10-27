@@ -27,7 +27,7 @@ class HomeController {
      *
      * @return void
      */
-    public function index(?array $datas = null): void {
+    public function index(): void {
         $this->authenticationService->verifyAuthentication();        
         $datas = $this->homeRepository->getDatas();
         $this->renderService->displayTemplates("Home", $datas, "Accueil");

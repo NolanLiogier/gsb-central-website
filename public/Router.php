@@ -28,10 +28,9 @@ class Router {
      * Démarre la session si elle n'est pas déjà active.
      *
      * @param string|null $route La route à traiter (par exemple, '/', '/user'). Si null, utilise $_SERVER['REQUEST_URI'].
-     * @param array|null $datas Données optionnelles à passer au contrôleur.
      * @return void
      */
-    public function getRoute(?string $route = null, ?array $datas = null): void {
+    public function getRoute(?string $route = null): void {
         if (!$route) {
             $route = $_SERVER['REQUEST_URI'] ?? '/';
         }
@@ -49,15 +48,6 @@ class Router {
             session_start();
         }
 
-        $specialRoutes = ['/modify-company'];
-        if (in_array($route, $specialRoutes)) {
-            $datas = $this->handleSpecialRoute($route, $datas);
-
-            if (empty($datas)) {
-                $route = '/not-found';
-            }
-        }
-
         $controller = match ($route) {
             '/' => new UserController(),
             '/user' => new UserController(),
@@ -70,16 +60,6 @@ class Router {
             default => new NotFoundController(),
         };
 
-        $controller->index($datas);
-    }
-
-    public function handleSpecialRoute(string $route, ?array $datas): array {
-        $datas = $datas ?? [];
-
-        if ($route === '/modify-company' && isset($_POST['companyId'])) {
-            $datas['companyId'] = $_POST['companyId'];
-        }
-
-        return $datas;
+        $controller->index();
     }
 }

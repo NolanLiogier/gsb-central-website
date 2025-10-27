@@ -2,33 +2,16 @@
 
 namespace App\Helpers;
 
+use Routing\Router;
+
 class StatusMessageService
 {
-    public function setSuccessMessage(string $message): void
-    {
-        $_SESSION['notification'] = [
-            'type' => 'success',
-            'message' => $message,
-            'duration' => 3000
-        ];
-    }
 
-    public function setErrorMessage(string $message): void
-    {
-        $_SESSION['notification'] = [
-            'type' => 'danger',
-            'message' => $message,
-            'duration' => 5000
-        ];
-    }
+    private Router $router;
 
-    public function setWarningMessage(string $message): void
+    public function __construct()
     {
-        $_SESSION['notification'] = [
-            'type' => 'warning',
-            'message' => $message,
-            'duration' => 5000
-        ];
+        $this->router = new Router();
     }
 
     /**
@@ -36,19 +19,14 @@ class StatusMessageService
      * 
      * @param string $message Le message à afficher
      * @param string $typeMessage Le type de message (success, error, warning)
-     * @param string $route La route vers laquelle rediriger
-     * @param \App\Helpers\RenderService $renderService Le service de rendu
      * @return void
      */
-    public function displayMessageAndRedirect(string $message, string $typeMessage, string $route, \App\Helpers\RenderService $renderService): void
+    public function setMessage(string $message, string $typeMessage): void
     {
-        match ($typeMessage) {
-            'success' => $this->setSuccessMessage($message),
-            'error' => $this->setErrorMessage($message),
-            'warning' => $this->setWarningMessage($message),
-            default => throw new \Exception('Type de message invalide'),
-        };
-        $renderService->displayTemplates($route);
-        exit();
+        $_SESSION['notification'] = [
+            'type' => $typeMessage,
+            'message' => $message,
+            'duration' => 3000
+        ];
     }
 }

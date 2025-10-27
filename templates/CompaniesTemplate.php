@@ -82,6 +82,7 @@ class CompaniesTemplate {
 
         <form action="/modify-company" method="POST" id="company-form">
             <input type="hidden" name="companyId" id="companyId" value="0" required>
+            <input type="hidden" name="renderModifyCompany" id="renderModifyCompany" value="true" required>
         </form>
 
         <script>

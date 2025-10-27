@@ -37,10 +37,11 @@ class UserRepository
      * 
      * Utilisé lors de l'authentification pour vérifier l'existence de l'utilisateur
      * et récupérer ses informations (notamment le mot de passe hashé pour la vérification).
-     * Inclut le rôle/fonction de l'utilisateur via un LEFT JOIN.
+     * Inclut le rôle/fonction de l'utilisateur via un LEFT JOIN, ainsi que l'entreprise
+     * et la fonction de l'utilisateur pour la gestion des permissions.
      *
      * @param string $email L'adresse email de l'utilisateur à rechercher.
-     * @return array Les données de l'utilisateur (user_id, email, password, firstname, lastname, function_name) si trouvé, un tableau vide sinon.
+     * @return array Les données de l'utilisateur (user_id, email, password, firstname, lastname, fk_company_id, fk_function_id, function_name) si trouvé, un tableau vide sinon.
      */
     public function getUserByEmail(string $email): array
     {
@@ -50,7 +51,7 @@ class UserRepository
 
             // Requête avec paramètres nommés pour éviter les injections SQL
             // LEFT JOIN sur functions pour récupérer le rôle même si non défini
-            $sql = "SELECT u.user_id, u.email, u.password, u.firstname, u.lastname, f.function_name 
+            $sql = "SELECT u.user_id, u.email, u.password, u.firstname, u.lastname, u.fk_company_id, u.fk_function_id, f.function_name 
                     FROM users u 
                     LEFT JOIN functions f ON u.fk_function_id = f.function_id 
                     WHERE u.email = :email";

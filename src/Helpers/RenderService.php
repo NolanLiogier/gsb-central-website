@@ -140,7 +140,7 @@ class RenderService
             <body>
                 <h1>Erreur de rendu</h1>
                 <p>Une erreur s'est produite lors du rendu de la page : " . htmlspecialchars($errorMessage) . "</p>
-                <p><a href='/user'>Retour à la connexion</a></p>
+                <p><a href='/login'>Retour à la connexion</a></p>
             </body>
             </html>";
         exit();

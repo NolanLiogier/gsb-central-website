@@ -23,16 +23,28 @@ class ModifyCompanyTemplate {
      * @return string HTML complet du formulaire de modification.
      */
     public function displayModifyCompany(array $datas = []): string {
-        // Extraction des listes de secteurs et commerciaux avec valeurs par défaut
+
+        if (empty($datas)) {
+            return '';
+        }
+
         $sectors = $datas['sectors'] ?? [];
         $salesmen = $datas['salesmen'] ?? [];
 
-        // Extraction des données de l'entreprise avec valeurs par défaut et échappement XSS
-        // Échappement de toutes les valeurs pour éviter les injections dans les champs de formulaire
         $companyName = htmlspecialchars($datas['company_name'] ?? '');
         $siret = htmlspecialchars($datas['siret'] ?? '');
         $siren = htmlspecialchars($datas['siren'] ?? '');
         $companyIdValue = htmlspecialchars($datas['company_id'] ?? 0);
+
+        // Détection du mode et récupération des textes appropriés
+        $modeData = $this->determineMode($datas);
+        $isEditMode = $modeData['isEditMode'];
+        $pageTitle = $modeData['pageTitle'];
+        $buttonText = $modeData['buttonText'];
+        
+        // Détection du type d'utilisateur (1 = commercial, 2 = client)
+        $userFunctionId = $datas['user_function_id'] ?? null;
+        $isClient = $userFunctionId == 2;
 
         $sectorOptions = $this->generateSectorOptions($sectors, $datas['selected_sector_id'] ?? null);
         $salesmanOptions = $this->generateSalesmanOptions($salesmen, $datas['selected_salesman_id'] ?? null);
@@ -40,7 +52,7 @@ class ModifyCompanyTemplate {
         $modifyCompanyContent = <<<HTML
         <!-- En-tête de la page -->
         <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">Modifier vos informations</h1>
+            <h1 class="text-3xl font-bold text-gray-900">{$pageTitle}</h1>
         </div>
 
         <!-- Formulaire de modification d'entreprise -->
@@ -51,17 +63,42 @@ class ModifyCompanyTemplate {
                     <div>
                         <h2 class="text-xl font-semibold text-gray-800">Informations de l'entreprise</h2>
                     </div>
-                    <a href="/companies" class="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors duration-200">
-                        <i class="fas fa-arrow-left mr-2"></i>
-                        Retour
-                    </a>
+        HTML;
+
+        // Ajout du bouton supprimer en mode modification uniquement à droite (pas pour les clients)
+        if ($isEditMode && !$isClient) {
+            $modifyCompanyContent .= <<<HTML
+                        <form method="POST" action="/modify-company" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette entreprise ?');" class="inline-block">
+                            <input type="hidden" name="companyId" value="{$companyIdValue}">
+                            <input type="hidden" name="deleteCompany" value="true">
+                            <button 
+                                type="submit" 
+                                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-700 rounded-lg hover:bg-red-700 transition-colors duration-200">
+                                <i class="fas fa-trash mr-2"></i>
+                                Supprimer
+                            </button>
+                        </form>
+        HTML;
+        } else {
+            $modifyCompanyContent .= <<<HTML
+                        <div></div>
+        HTML;
+        }
+
+        $modifyCompanyContent .= <<<HTML
                 </div>
             </div>
             
             <form class="p-8" method="POST" action="/modify-company">
-                <!-- Champ caché pour l'ID de l'entreprise -->
-                <input type="hidden" name="companyId" value="{$companyIdValue}">
-                <input type="hidden" name="updateCompany" value="true">
+                <!-- Champ caché pour détecter le mode (modification ou création) -->
+        HTML;
+
+        // Génération des champs cachés selon le mode (modification ou création)
+        $hiddenFields = $this->generateHiddenFields($isEditMode, $companyIdValue);
+
+        $modifyCompanyContent .= $hiddenFields;
+        $modifyCompanyContent .= <<<HTML
+
                 <!-- Grille des champs du formulaire -->
                 <div class="space-y-6">
                     <!-- Nom de l'entreprise -->
@@ -151,20 +188,89 @@ class ModifyCompanyTemplate {
 
                 <!-- Boutons d'action -->
                 <div class="flex justify-end space-x-4 pt-8 mt-8 border-t border-gray-200">
-                    <a href="/companies" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">
-                        Annuler
-                    </a>
+HTML;
+
+        // Affichage du bouton Retour uniquement si ce n'est pas un client
+        $returnButtonHtml = '';
+        if (!$isClient) {
+            $returnButtonHtml = '<a href="/companies" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>';
+        }
+
+        $modifyCompanyContent .= $returnButtonHtml;
+        $modifyCompanyContent .= <<<HTML
                     <button 
                         type="submit" 
                         class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm">
-                        Enregistrer les modifications
+                        {$buttonText}
                     </button>
                 </div>
             </form>
         </div>
-    HTML;
+
+HTML;
 
         return $modifyCompanyContent;
+    }
+
+    /**
+     * Détermine si on est en mode modification ou création et retourne les textes appropriés.
+     * 
+     * Analyse les données fournies pour savoir si une entreprise existe déjà (mode modification)
+     * ou si on est en train de créer une nouvelle entreprise (mode création).
+     * Retourne un tableau avec les informations nécessaires (mode, titres, textes des boutons).
+     *
+     * @param array $datas Données de l'entreprise avec éventuellement un company_id.
+     * @return array Tableau contenant ['isEditMode', 'pageTitle', 'buttonText'].
+     */
+    private function determineMode(array $datas): array {
+        $isEditMode = false;
+        if (!empty($datas['company_id']) && $datas['company_id'] != '0') {
+            $isEditMode = true;
+        }
+
+        $modeData = [
+            'isEditMode' => $isEditMode,
+            'pageTitle' => "Ajouter une entreprise",
+            'buttonText' => "Créer l'entreprise"
+        ];
+
+        if ($isEditMode) {
+            $modeData = [
+                'isEditMode' => $isEditMode,
+                'pageTitle' => "Modifier vos informations",
+                'buttonText' => "Enregistrer les modifications"
+            ];
+        }
+
+        return $modeData;
+    }
+
+    /**
+     * Génère les champs cachés du formulaire selon le mode (modification ou création).
+     * 
+     * Détecte si on est en mode modification (avec ID) ou création (sans ID) et génère
+     * les champs cachés appropriés pour que le contrôleur traite correctement la requête.
+     *
+     * @param bool $isEditMode True si en mode modification, false si en mode création.
+     * @param string|int $companyId ID de l'entreprise (échappé pour l'affichage).
+     * @return string Champs cachés HTML générés.
+     */
+    private function generateHiddenFields(bool $isEditMode, $companyId): string {
+        if ($isEditMode) {
+            // Mode modification : on transmet l'ID et le flag de mise à jour
+            return <<<HTML
+
+                <input type="hidden" name="companyId" value="{$companyId}">
+                <input type="hidden" name="updateCompany" value="true">
+            HTML;
+        } else {
+            // Mode création : on transmet le flag de nouvelle entreprise et de création
+            return <<<HTML
+
+                <input type="hidden" name="newCompany" value="true">
+                <input type="hidden" name="createCompany" value="true">
+            HTML;
+        }
     }
 
     /**
@@ -215,40 +321,5 @@ class ModifyCompanyTemplate {
         }
         
         return $options;
-    }
-
-    /**
-     * Génère les messages d'erreur HTML.
-     *
-     * @param array $errors Liste des erreurs à afficher
-     * @return string Messages d'erreur HTML générés
-     */
-    private function generateErrorMessages(array $errors): string {
-        if (empty($errors)) {
-            return '';
-        }
-
-        $errorList = '';
-        foreach ($errors as $error) {
-            $errorList .= '<li>' . htmlspecialchars($error) . '</li>';
-        }
-
-        return <<<HTML
-        <div class="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <i class="fas fa-exclamation-circle text-red-400"></i>
-                </div>
-                <div class="ml-3">
-                    <h3 class="text-sm font-medium text-red-800">Erreurs de validation :</h3>
-                    <div class="mt-2 text-sm text-red-700">
-                        <ul class="list-disc list-inside space-y-1">
-                            {$errorList}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-HTML;
     }
 }

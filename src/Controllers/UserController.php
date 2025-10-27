@@ -98,14 +98,14 @@ class UserController
         $user = $this->userRepository->getUserByEmail($email);
         if (empty($user)) {
             $this->statusMessageService->setMessage('Utilisateur inconnu', 'error');
-            $this->router->getRoute('/user');
+            $this->router->getRoute('/login');
             exit;
         }
 
         // Vérification du mot de passe hashé avec password_verify (sécurité contre timing attacks)
         if (!password_verify($password, $user['password'])) {
             $this->statusMessageService->setMessage('Mot de passe incorrect', 'error');
-            $this->router->getRoute('/user');
+            $this->router->getRoute('/login');
             exit;
         }
 

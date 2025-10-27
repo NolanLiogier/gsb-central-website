@@ -42,7 +42,7 @@ class Router {
      * si nécessaire et instancie le contrôleur approprié selon le chemin demandé.
      * Les routes non définies sont traitées par NotFoundController.
      *
-     * @param string|null $route La route à traiter (par exemple, '/', '/user'). Si null, utilise $_SERVER['REQUEST_URI'].
+     * @param string|null $route La route à traiter (par exemple, '/', '/login'). Si null, utilise $_SERVER['REQUEST_URI'].
      * @return void
      */
     public function getRoute(?string $route = null): void {
@@ -70,7 +70,7 @@ class Router {
         // Table de routage : associe chaque chemin à son contrôleur
         $controller = match ($route) {
             '/' => new UserController(),
-            '/user' => new UserController(),
+            '/login' => new UserController(),
             '/home' => new HomeController(),
             '/companies' => new CompaniesController(),
             '/modify-company' => new CompaniesController(),

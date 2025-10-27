@@ -26,10 +26,14 @@ class CompaniesTemplate {
         <!-- Titre de la page et bouton d'ajout -->
         <div class="mb-8 flex justify-between items-center">
             <h1 class="text-4xl font-bold text-gray-800">Entreprises</h1>
-            <button class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
-                <i class="fas fa-plus text-white"></i>
-                <span>Ajouter une entreprise</span>
-            </button>
+            <form action="/modify-company" method="POST" class="inline-block">
+                <input type="hidden" name="newCompany" value="true">
+                <input type="hidden" name="renderAddCompany" value="true">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-plus text-white"></i>
+                    <span>Ajouter une entreprise</span>
+                </button>
+            </form>
         </div>
 
         <!-- Tableau des entreprises -->
@@ -51,26 +55,44 @@ class CompaniesTemplate {
                 <tbody class="bg-white divide-y divide-gray-200">
         HTML;
 
-        // Génération dynamique des lignes du tableau pour chaque entreprise
-        foreach ($datas['companies'] as $company) {
-            // Construction du nom complet du commercial avec gestion du cas "non assigné"
-            // Affiche "Prénom Nom" si les deux sont présents, sinon "Non assigné"
-            $salesmanName = 'Non assigné';
-            if (!empty($company['firstname']) && !empty($company['lastname'])) {
-                $salesmanName = ucfirst($company['firstname']) . ' ' . ucfirst($company['lastname']);
-            }
-            
-            // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
-            // Facilite la lecture et maintient un style uniforme dans le tableau
-            $companyNameUpper = strtoupper($company['company_name']);
-            
-            // Échappement XSS de toutes les valeurs pour éviter les injections
-            $companyId = htmlspecialchars($company['company_id']);
-            $companyName = htmlspecialchars($companyNameUpper);
-            $sectorName = htmlspecialchars($company['sector_name']);
-            $salesmanName = htmlspecialchars($salesmanName);
-            
+        // Récupération sécurisée de la liste des entreprises (tableau vide si absente)
+        $companies = $datas['companies'] ?? [];
+
+        // Vérification si la liste des entreprises est vide
+        if (empty($companies)) {
+            // Message à afficher lorsqu'il n'y a aucune entreprise
             $companiesContent .= <<<HTML
+                    <tr>
+                        <td colspan="3" class="px-6 py-12 text-center">
+                            <div class="text-gray-500">
+                                <i class="fas fa-building text-4xl mb-4"></i>
+                                <p class="text-lg font-medium">Aucune entreprise trouvée</p>
+                                <p class="text-sm mt-2">Vous n'avez aucune entreprise assignée pour le moment.</p>
+                            </div>
+                        </td>
+                    </tr>
+                HTML;
+        } else {
+            // Génération dynamique des lignes du tableau pour chaque entreprise
+            foreach ($companies as $company) {
+                // Construction du nom complet du commercial avec gestion du cas "non assigné"
+                // Affiche "Prénom Nom" si les deux sont présents, sinon "Non assigné"
+                $salesmanName = 'Non assigné';
+                if (!empty($company['firstname']) && !empty($company['lastname'])) {
+                    $salesmanName = ucfirst($company['firstname']) . ' ' . ucfirst($company['lastname']);
+                }
+                
+                // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
+                // Facilite la lecture et maintient un style uniforme dans le tableau
+                $companyNameUpper = strtoupper($company['company_name']);
+                
+                // Échappement XSS de toutes les valeurs pour éviter les injections
+                $companyId = htmlspecialchars($company['company_id']);
+                $companyName = htmlspecialchars($companyNameUpper);
+                $sectorName = htmlspecialchars($company['sector_name']);
+                $salesmanName = htmlspecialchars($salesmanName);
+                
+                $companiesContent .= <<<HTML
                     <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$companyId}')">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
@@ -89,6 +111,7 @@ class CompaniesTemplate {
                         </td>
                     </tr>
                 HTML;
+            }
         }
 
         $companiesContent .= <<<HTML

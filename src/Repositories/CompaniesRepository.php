@@ -33,66 +33,6 @@ class CompaniesRepository {
         $this->connection = $database->getConnection();
     }
 
-
-    /**
-     * Récupère toutes les entreprises avec leurs informations complètes.
-     * 
-     * Effectue une jointure avec les tables sectors et users pour récupérer
-     * les secteurs d'activité et les commerciaux associés. Extrait également
-     * la liste unique des secteurs pour les filtres ou statistiques.
-     *
-     * @return array Liste des entreprises et secteurs: ['companies' => [...], 'sectors' => [...]]
-     */
-    public function getCompanies(): array {
-        try {
-            // Vérification de la connexion avant toute requête pour éviter les erreurs fatales
-            if (!$this->connection) {
-                return [
-                    'companies' => [],
-                    'sectors' => []
-                ];
-            }
-
-            // Requête optimisée : récupération en une seule fois avec JOINs
-            // INNER JOIN sur sectors car une entreprise doit avoir un secteur
-            // LEFT JOIN sur users car un commercial peut être optionnel
-            $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, s.sector_name, 
-                             u.user_id, u.firstname, u.lastname
-                      FROM companies c 
-                      INNER JOIN sectors s ON c.fk_sector_id = s.sector_id 
-                      LEFT JOIN users u ON c.fk_salesman_id = u.user_id
-                      ORDER BY c.company_name";
-            
-            $stmt = $this->connection->prepare($query);
-            $stmt->execute();
-            
-            // Récupération en mode associatif pour faciliter l'accès par nom de colonne
-            $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Extraction et déduplication des secteurs à partir des résultats
-            // Plus efficace que de faire une requête séparée pour obtenir tous les secteurs
-            $sectors = [];
-            foreach ($companies as $company) {
-                if (!empty($company['sector_name']) && !in_array($company['sector_name'], $sectors)) {
-                    $sectors[] = $company['sector_name'];
-                }
-            }
-            sort($sectors);
-            
-            return [
-                'companies' => $companies,
-                'sectors' => $sectors
-            ];
-            
-        } catch (PDOException $e) {
-            // En cas d'erreur, retourner des structures vides pour éviter les erreurs fatales côté vue
-            return [
-                'companies' => [],
-                'sectors' => []
-            ];
-        }
-    }
-
     /**
      * Récupère les données complètes d'une entreprise spécifique.
      * 
@@ -103,7 +43,7 @@ class CompaniesRepository {
      * @param int $companyId ID de l'entreprise à récupérer.
      * @return array Données de l'entreprise avec secteurs et commerciaux, ou tableau vide.
      */
-    public function getCompanyData(int $companyId): array {
+    public function getCompanyById(int $companyId): array {
         try {
             // Vérification de la connexion avant la requête
             if (!$this->connection) {
@@ -112,12 +52,13 @@ class CompaniesRepository {
 
             // Préfixe "selected_" pour distinguer les valeurs courantes des options du formulaire
             // Permet de présélectionner le bon secteur et commercial dans les listes déroulantes
+            // Utilisation de LEFT JOIN pour le commercial car il peut être null
             $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, 
                              s.sector_id as selected_sector_id, s.sector_name as selected_sector_name,
                              u.user_id as selected_salesman_id, u.firstname as selected_salesman_firstname, u.lastname as selected_salesman_lastname
                       FROM companies c 
                       INNER JOIN sectors s ON c.fk_sector_id = s.sector_id 
-                      INNER JOIN users u ON c.fk_salesman_id = u.user_id
+                      LEFT JOIN users u ON c.fk_salesman_id = u.user_id
                       WHERE c.company_id = :company_id";
             
             $stmt = $this->connection->prepare($query);
@@ -132,6 +73,63 @@ class CompaniesRepository {
         } catch (PDOException $e) {
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
+        }
+    }
+
+    /**
+     * Récupère toutes les entreprises assignées à un commercial spécifique.
+     * 
+     * Filtre les entreprises par le commercial assigné via fk_salesman_id.
+     * Utilisé pour les commerciaux qui doivent voir uniquement leurs entreprises assignées.
+     *
+     * @param int $salesmanId ID du commercial.
+     * @return array Liste des entreprises assignées au commercial et secteurs.
+     */
+    public function getCompaniesBySalesman(int $salesmanId): array {
+        try {
+            if (!$this->connection) {
+                return [
+                    'companies' => [],
+                    'sectors' => []
+                ];
+            }
+
+            // Filtrage des entreprises par le commercial assigné
+            // INNER JOIN sur sectors car une entreprise doit avoir un secteur
+            // WHERE c.fk_salesman_id = :salesman_id pour filtrer par commercial
+            $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, s.sector_name, 
+                             u.user_id, u.firstname, u.lastname
+                      FROM companies c 
+                      INNER JOIN sectors s ON c.fk_sector_id = s.sector_id 
+                      LEFT JOIN users u ON c.fk_salesman_id = u.user_id
+                      WHERE c.fk_salesman_id = :salesman_id
+                      ORDER BY c.company_name";
+            
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $companies = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Extraction et déduplication des secteurs
+            $sectors = [];
+            foreach ($companies as $company) {
+                if (!empty($company['sector_name']) && !in_array($company['sector_name'], $sectors)) {
+                    $sectors[] = $company['sector_name'];
+                }
+            }
+            sort($sectors);
+            
+            return [
+                'companies' => $companies,
+                'sectors' => $sectors
+            ];
+            
+        } catch (PDOException $e) {
+            return [
+                'companies' => [],
+                'sectors' => []
+            ];
         }
     }
 
@@ -249,6 +247,95 @@ class CompaniesRepository {
             $stmt->bindParam(':siren', $companyData['siren'], PDO::PARAM_STR);
             $stmt->bindParam(':sector_id', $companyData['sector'], PDO::PARAM_INT);
             $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+            
+        } catch (PDOException $e) {
+            // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
+            return false;
+        }
+    }
+
+    /**
+     * Crée une nouvelle entreprise dans la base de données.
+     * 
+     * Valide les données d'entreprise (SIRET, SIREN au bon format), vérifie la présence
+     * des champs requis, et insère une nouvelle entrée dans la table companies.
+     * Le commercial est optionnel et peut être null pour ne pas assigner de commercial.
+     *
+     * @param array $companyData Données de l'entreprise à créer (company_name, siret, siren, sector, salesman).
+     * @return bool True si l'insertion a réussi, false en cas d'erreur ou de données invalides.
+     */
+    public function addCompany(array $companyData): bool {
+        try {
+            // Vérification de la connexion avant toute opération
+            if (!$this->connection) {
+                return false;
+            }
+
+            // Validation de la présence des champs obligatoires (sans company_id car c'est une création)
+            if (empty($companyData['company_name']) || 
+                empty($companyData['siret']) || empty($companyData['siren']) || 
+                empty($companyData['sector'])) {
+                return false;
+            }
+
+            // Validation du format SIRET : exactement 14 chiffres (format français officiel)
+            if (!preg_match('/^\d{14}$/', $companyData['siret'])) {
+                return false;
+            }
+
+            // Validation du format SIREN : exactement 9 chiffres (format français officiel)
+            if (!preg_match('/^\d{9}$/', $companyData['siren'])) {
+                return false;
+            }
+
+            // Préparation de la requête INSERT avec paramètres nommés pour éviter les injections SQL
+            $query = "INSERT INTO companies (company_name, siret, siren, fk_sector_id, fk_salesman_id) 
+                      VALUES (:company_name, :siret, :siren, :sector_id, :salesman_id)";
+            
+            $stmt = $this->connection->prepare($query);
+            
+            // Gestion du commercial : valeur nullable (peut être null si non assigné)
+            $salesmanId = !empty($companyData['salesman']) ? $companyData['salesman'] : null;
+            
+            // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
+            $stmt->bindParam(':company_name', $companyData['company_name'], PDO::PARAM_STR);
+            $stmt->bindParam(':siret', $companyData['siret'], PDO::PARAM_STR);
+            $stmt->bindParam(':siren', $companyData['siren'], PDO::PARAM_STR);
+            $stmt->bindParam(':sector_id', $companyData['sector'], PDO::PARAM_INT);
+            $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+            
+        } catch (PDOException $e) {
+            // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
+            return false;
+        }
+    }
+
+    /**
+     * Supprime une entreprise de la base de données.
+     * 
+     * Supprime l'enregistrement de l'entreprise spécifiée par son ID.
+     * La suppression peut échouer si l'entreprise a des relations avec d'autres tables
+     * ou si la connexion à la base de données est perdue.
+     *
+     * @param int $companyId ID de l'entreprise à supprimer.
+     * @return bool True si la suppression a réussi, false en cas d'erreur.
+     */
+    public function deleteCompany(int $companyId): bool {
+        try {
+            // Vérification de la connexion avant toute opération
+            if (!$this->connection) {
+                return false;
+            }
+
+            // Préparation de la requête DELETE avec paramètre nommé pour éviter les injections SQL
+            $query = "DELETE FROM companies WHERE company_id = :company_id";
+            
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindParam(':company_id', $companyId, PDO::PARAM_INT);
             
             return $stmt->execute();
             

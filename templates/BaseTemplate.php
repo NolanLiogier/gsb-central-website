@@ -16,31 +16,25 @@ class BaseTemplate
      * Détermine les classes CSS pour un lien de navigation selon son état actif.
      * 
      * Compare la route du lien avec la route actuelle pour appliquer les bonnes
-     * classes CSS. Gère également les cas spéciaux (route racine = home).
+     * classes CSS. Gère également les cas spéciaux (route racine = home) et
+     * les relations parent/enfant (ex: /modify-company = enfant de /companies).
      * Utilisé pour mettre en évidence le lien de la page courante dans la navigation.
      * 
      * @param string $linkRoute Route du lien à vérifier (ex: '/home', '/companies').
      * @param string $currentRoute Route actuelle de la page.
      * @return string Classes CSS pour l'état actif (bleu) ou normal (gris).
      */
-    private function getNavLinkClasses(string $linkRoute, string $currentRoute): string
+    private function getNavLinkClasses(array $linkRoutes, string $currentRoute): string
     {
-        // Normalisation des routes : suppression du slash initial et conversion en minuscules
-        // Évite les problèmes de casse et de forme dans la comparaison
-        $normalizedLinkRoute = strtolower(ltrim($linkRoute, '/'));
-        $normalizedCurrentRoute = strtolower(ltrim($currentRoute, '/'));
-        
-        // Détermination de l'état actif : correspondance exacte OU route racine = home
-        $isActive = ($normalizedCurrentRoute === $normalizedLinkRoute) || 
-                   ($normalizedCurrentRoute === '' && $normalizedLinkRoute === 'home') ||
-                   ($normalizedCurrentRoute === 'home' && $normalizedLinkRoute === 'home');
-        
-        // Classes CSS pour l'état actif : texte bleu plus foncé avec font semi-bold
-        if ($isActive) {
-            return 'text-blue-600 font-semibold hover:text-blue-800';
+        $currentRoute = strtolower(ltrim($currentRoute, '/'));
+          
+        foreach ($linkRoutes as $linkRoute) {
+            $link = strtolower(ltrim($linkRoute, '/'));
+            if ($link === $currentRoute) {
+                return 'text-blue-600 font-semibold hover:text-blue-800';
+            }
         }
-        
-        // Classes CSS pour l'état normal : texte gris avec effet hover
+
         return 'text-gray-600 hover:text-gray-800';
     }
 
@@ -58,10 +52,10 @@ class BaseTemplate
     {
         // Génération des classes CSS dynamiques pour chaque lien selon son état actif
         // Permet de mettre en évidence visuellement la page courante
-        $homeNavClasses = $this->getNavLinkClasses('/home', $currentRoute);
-        $companiesNavClasses = $this->getNavLinkClasses('/companies', $currentRoute);
-        $ordersNavClasses = $this->getNavLinkClasses('/orders', $currentRoute);
-        $stockNavClasses = $this->getNavLinkClasses('/stock', $currentRoute);
+        $homeNavClasses = $this->getNavLinkClasses(['/Home'], $currentRoute);
+        $companiesNavClasses = $this->getNavLinkClasses(['/Companies', '/ModifyCompany'], $currentRoute);
+        $ordersNavClasses = $this->getNavLinkClasses(['/Orders'], $currentRoute);
+        $stockNavClasses = $this->getNavLinkClasses(['/Stock'], $currentRoute);
 
         return <<<HTML
             <header class="bg-white shadow-sm">

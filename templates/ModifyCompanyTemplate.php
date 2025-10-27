@@ -4,25 +4,35 @@ namespace Templates;
 
 /**
  * Classe ModifyCompanyTemplate
+ * 
  * Gère l'affichage du template de modification d'entreprise.
+ * Crée un formulaire complet pour modifier les informations d'une entreprise :
+ * nom, SIRET, SIREN, secteur et commercial assigné. Gère les listes déroulantes
+ * avec présélection des valeurs courantes et validation des formats.
  */
 class ModifyCompanyTemplate {
     /**
-     * Affiche le contenu HTML de la page de modification d'entreprise.
+     * Génère le contenu HTML du formulaire de modification d'entreprise.
+     * 
+     * Crée un formulaire avec validation des champs SIRET (14 chiffres) et SIREN (9 chiffres).
+     * Remplit les listes déroulantes de secteurs et commerciaux avec les options disponibles
+     * et présélectionne les valeurs actuelles de l'entreprise. Inclut des boutons d'annulation
+     * et de sauvegarde.
      *
-     * @param array $datas Données contenant companyData, sectors, salesmen et errors.
-     * @return string The full HTML page.
+     * @param array $datas Données de l'entreprise (company_id, company_name, siret, siren, selected_sector_id, selected_salesman_id) et listes (sectors, salesmen).
+     * @return string HTML complet du formulaire de modification.
      */
     public function displayModifyCompany(array $datas = []): string {
-        // Extraction des données nécessaires directement depuis $datas
+        // Extraction des listes de secteurs et commerciaux avec valeurs par défaut
         $sectors = $datas['sectors'] ?? [];
         $salesmen = $datas['salesmen'] ?? [];
 
-        // Extraction des données de l'entreprise avec valeurs par défaut
-        $companyName = $datas['company_name'] ?? '';
-        $siret = $datas['siret'] ?? '';
-        $siren = $datas['siren'] ?? '';
-        $companyIdValue = $datas['company_id'] ?? 0;
+        // Extraction des données de l'entreprise avec valeurs par défaut et échappement XSS
+        // Échappement de toutes les valeurs pour éviter les injections dans les champs de formulaire
+        $companyName = htmlspecialchars($datas['company_name'] ?? '');
+        $siret = htmlspecialchars($datas['siret'] ?? '');
+        $siren = htmlspecialchars($datas['siren'] ?? '');
+        $companyIdValue = htmlspecialchars($datas['company_id'] ?? 0);
 
         $sectorOptions = $this->generateSectorOptions($sectors, $datas['selected_sector_id'] ?? null);
         $salesmanOptions = $this->generateSalesmanOptions($salesmen, $datas['selected_salesman_id'] ?? null);
@@ -158,15 +168,20 @@ class ModifyCompanyTemplate {
     }
 
     /**
-     * Génère les options HTML pour le select des secteurs.
+     * Génère les options HTML pour le select des secteurs d'activité.
+     * 
+     * Crée les balises <option> pour peupler la liste déroulante des secteurs.
+     * Présélectionne le secteur actuel de l'entreprise et échappe toutes les
+     * valeurs pour éviter les injections XSS.
      *
-     * @param array $sectors Liste des secteurs disponibles
-     * @param int|null $selectedSectorId ID du secteur sélectionné
-     * @return string Options HTML générées
+     * @param array $sectors Liste des secteurs disponibles (avec sector_id et sector_name).
+     * @param int|null $selectedSectorId ID du secteur actuellement sélectionné (pour présélection).
+     * @return string Options HTML générées pour le <select>.
      */
     private function generateSectorOptions(array $sectors, ?int $selectedSectorId = null): string {
         $options = '<option value="">Sélectionnez un secteur</option>';
         
+        // Génération de chaque option avec échappement XSS et présélection si nécessaire
         foreach ($sectors as $sector) {
             $sectorId = htmlspecialchars($sector['sector_id']);
             $sectorName = htmlspecialchars($sector['sector_name']);
@@ -179,14 +194,19 @@ class ModifyCompanyTemplate {
 
     /**
      * Génère les options HTML pour le select des commerciaux.
+     * 
+     * Crée les balises <option> pour peupler la liste déroulante des commerciaux.
+     * Présélectionne le commercial actuellement assigné (peut être "Aucun").
+     * Échappe toutes les valeurs pour éviter les injections XSS.
      *
-     * @param array $salesmen Liste des commerciaux disponibles
-     * @param int|null $selectedSalesmanId ID du commercial sélectionné
-     * @return string Options HTML générées
+     * @param array $salesmen Liste des commerciaux disponibles.
+     * @param int|null $selectedSalesmanId ID du commercial actuellement assigné (peut être null).
+     * @return string Options HTML générées pour le <select>.
      */
     private function generateSalesmanOptions(array $salesmen, ?int $selectedSalesmanId = null): string {
         $options = '<option value="">Aucun commercial assigné</option>';
         
+        // Génération de chaque option avec concaténation prénom + nom et présélection
         foreach ($salesmen as $salesman) {
             $salesmanId = htmlspecialchars($salesman['salesman_id']);
             $salesmanName = htmlspecialchars($salesman['salesman_firstname'] . ' ' . $salesman['salesman_lastname']);

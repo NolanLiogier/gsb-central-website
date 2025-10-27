@@ -3,42 +3,61 @@
 namespace Templates;
 
 /**
- * Template de base pour toutes les pages de l'application GSB Central
- * Gère la structure HTML commune, les notifications et le layout conditionnel
+ * Template de base pour toutes les pages de l'application GSB Central.
+ * 
+ * Encapsule toute la structure HTML commune (doctype, meta tags, head, body).
+ * Gère le header avec navigation responsive (desktop/mobile), le footer,
+ * les notifications flash messages, et détermine dynamiquement la présence
+ * du header/footer selon le type de page (page de connexion vs pages internes).
  */
 class BaseTemplate
 {
     /**
-     * Détermine si un lien de navigation est actif selon la route actuelle
-     * @param string $linkRoute - Route du lien à vérifier
-     * @param string $currentRoute - Route actuelle
-     * @return string - Classes CSS pour l'état actif ou normal
+     * Détermine les classes CSS pour un lien de navigation selon son état actif.
+     * 
+     * Compare la route du lien avec la route actuelle pour appliquer les bonnes
+     * classes CSS. Gère également les cas spéciaux (route racine = home).
+     * Utilisé pour mettre en évidence le lien de la page courante dans la navigation.
+     * 
+     * @param string $linkRoute Route du lien à vérifier (ex: '/home', '/companies').
+     * @param string $currentRoute Route actuelle de la page.
+     * @return string Classes CSS pour l'état actif (bleu) ou normal (gris).
      */
     private function getNavLinkClasses(string $linkRoute, string $currentRoute): string
     {
-        // Normalisation des routes pour la comparaison (suppression du slash initial et conversion en minuscules)
+        // Normalisation des routes : suppression du slash initial et conversion en minuscules
+        // Évite les problèmes de casse et de forme dans la comparaison
         $normalizedLinkRoute = strtolower(ltrim($linkRoute, '/'));
         $normalizedCurrentRoute = strtolower(ltrim($currentRoute, '/'));
         
+        // Détermination de l'état actif : correspondance exacte OU route racine = home
         $isActive = ($normalizedCurrentRoute === $normalizedLinkRoute) || 
                    ($normalizedCurrentRoute === '' && $normalizedLinkRoute === 'home') ||
                    ($normalizedCurrentRoute === 'home' && $normalizedLinkRoute === 'home');
         
+        // Classes CSS pour l'état actif : texte bleu plus foncé avec font semi-bold
         if ($isActive) {
             return 'text-blue-600 font-semibold hover:text-blue-800';
         }
         
+        // Classes CSS pour l'état normal : texte gris avec effet hover
         return 'text-gray-600 hover:text-gray-800';
     }
 
     /**
-     * Génère le header HTML avec navigation et barre de recherche
-     * @param string $currentRoute - Route actuelle pour déterminer l'état actif des liens
-     * @return string - HTML du header
+     * Génère le header HTML avec navigation responsive et barre de recherche.
+     * 
+     * Crée l'en-tête de navigation avec deux versions : desktop (visible sur écrans larges)
+     * et mobile (menu hamburger). Détermine les classes CSS actives pour les liens de
+     * navigation. Inclut le logo GSB Central, les liens de navigation, et la barre de recherche.
+     * 
+     * @param string $currentRoute Route actuelle pour déterminer l'état actif des liens.
+     * @return string HTML complet du header avec navigation responsive.
      */
     private function getHeader(string $currentRoute): string
     {
-        // Génération des classes CSS pour les liens de navigation
+        // Génération des classes CSS dynamiques pour chaque lien selon son état actif
+        // Permet de mettre en évidence visuellement la page courante
         $homeNavClasses = $this->getNavLinkClasses('/home', $currentRoute);
         $companiesNavClasses = $this->getNavLinkClasses('/companies', $currentRoute);
         $ordersNavClasses = $this->getNavLinkClasses('/orders', $currentRoute);
@@ -127,11 +146,16 @@ class BaseTemplate
     }
 
     /**
-     * Génère le footer HTML avec copyright
-     * @return string - HTML du footer
+     * Génère le footer HTML avec copyright et informations de base.
+     * 
+     * Crée le pied de page avec l'année courante dynamique pour le copyright.
+     * Design minimaliste avec bordure supérieure pour séparation visuelle.
+     * 
+     * @return string HTML du footer.
      */
     private function getFooter(): string
     {
+        // Année courante pour copyright dynamique
         $currentYear = date('Y');
         
         return <<<HTML
@@ -144,12 +168,18 @@ class BaseTemplate
     }
 
     /**
-     * Génère le script JavaScript pour afficher les notifications de session
-     * @return string - Script JavaScript pour les notifications ou chaîne vide
+     * Génère le script JavaScript pour afficher les notifications de session.
+     * 
+     * Récupère la notification stockée dans la session (pattern flash message),
+     * l'échappe pour éviter les injections XSS, puis génère le code JavaScript
+     * nécessaire à l'affichage de la notification. Supprime la notification de
+     * la session après récupération pour éviter les affichages répétés.
+     * 
+     * @return string Script JavaScript pour afficher la notification, ou chaîne vide si aucune notification.
      */
     private function getNotificationScript(): string
     {
-        // Initialisation de la session si nécessaire
+        // Initialisation de la session si elle n'est pas déjà active
         if (session_status() == PHP_SESSION_NONE) {
             session_start();
         }
@@ -159,43 +189,67 @@ class BaseTemplate
             return '';
         }
         
+        // Récupération et normalisation des données de notification
         $notification = $_SESSION['notification'];
+        $message = $notification['message'] ?? '';
         $type = $notification['type'] ?? 'success';
-        $message = htmlspecialchars($notification['message'] ?? '');
         $duration = $notification['duration'] ?? 5000;
         
-        // Suppression de la notification de la session après récupération
+        // Suppression immédiate de la notification de la session (flash message pattern)
+        // Évite les affichages répétés si l'utilisateur recharge la page
         unset($_SESSION['notification']);
         
-        // Génération du script JavaScript pour afficher la notification
-        return "<script>showNotification('{$message}', '{$type}', {$duration});</script>";
+        // Utilisation de json_encode pour échapper correctement les chaînes JavaScript
+        // Plus sûr que la concaténation directe pour éviter les injections JS
+        // JSON_HEX flags convertissent les caractères dangereux en séquences hex
+        $messageJs = json_encode($message, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $typeJs = json_encode($type, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        
+        // Génération du script JavaScript pour appeler showNotification()
+        return "<script>showNotification({$messageJs}, {$typeJs}, {$duration});</script>";
     }
 
     /**
-     * Génère le HTML complet d'une page avec header, contenu et footer
-     * @param string $title - Titre de la page affiché dans l'onglet du navigateur
-     * @param string $content - Contenu principal de la page
-     * @param string $currentRoute - Route actuelle pour déterminer l'état actif des liens
-     * @return string - HTML complet de la page
+     * Génère le HTML complet d'une page avec tous ses composants.
+     * 
+     * Point d'entrée principal du template de base. Assemble tous les composants :
+     * head (meta tags, SEO, CDN), body, header (navigation), main (contenu),
+     * footer, notifications, et scripts JavaScript. Détermine dynamiquement
+     * si le header/footer doivent être affichés selon le type de page.
+     * 
+     * @param string $title Titre de la page affiché dans l'onglet du navigateur.
+     * @param string $content Contenu principal de la page (généré par le template spécifique).
+     * @param string $currentRoute Route actuelle pour la navigation et état actif des liens.
+     * @return string HTML complet de la page (doctype + html + head + body avec tous les composants).
      */
     public function render(string $title = 'GSB Central', string $content = '', string $currentRoute = ''): string
     {
+        // Récupération du script de notification flash si présent en session
         $notificationScript = $this->getNotificationScript();
 
-        // Définition des pages qui utilisent un layout complet (sans header/footer)
+        // Liste des pages qui n'utilisent PAS le header/footer (page de connexion, 404, etc.)
+        // Ces pages ont leur propre layout complet sans navigation
         $noHeaderFooterPages = ['Connexion', '404 Not Found'];
         $hasHeaderFooter = !in_array($title, $noHeaderFooterPages);
 
-        // Génération des composants selon le type de page
+        // Génération conditionnelle des composants selon le type de page
+        // Pages internes : header + footer + layout avec container
+        // Pages spéciales (login, 404) : pas de header/footer, layout plein écran
         $header = $hasHeaderFooter ? $this->getHeader($currentRoute) : '';
         $footer = $hasHeaderFooter ? $this->getFooter() : '';
+        
+        // Wrapper du contenu : container responsive pour pages internes, contenu brut pour pages spéciales
         $main = $hasHeaderFooter ? 
             <<<HTML
                 <main class="container mx-auto mt-4 p-4 flex-grow">
                     {$content}
                 </main>
             HTML : $content;
+        
+        // Classes du body : flex-col pour pages internes (push footer en bas), simple pour pages spéciales
         $bodyClass = $hasHeaderFooter ? 'bg-gray-100 font-sans antialiased min-h-screen flex flex-col' : 'bg-gray-100 font-sans antialiased min-h-screen';
+        
+        // Échappement du titre pour éviter les injections XSS dans la balise <title>
         $escapedTitle = htmlspecialchars($title);
 
         return <<<HTML

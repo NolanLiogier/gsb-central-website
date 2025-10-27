@@ -3,17 +3,25 @@
 namespace Templates;
 
 /**
- * Classe CompanyTemplate
- * Gère l'affichage du template de la page des entreprises.
+ * Classe CompaniesTemplate
+ * 
+ * Gère l'affichage du template de la page de liste des entreprises.
+ * Crée un tableau interactif affichant les entreprises avec leurs secteurs
+ * et commerciaux assignés. Gère le clic sur une ligne pour accéder à
+ * la modification de l'entreprise.
  */
 class CompaniesTemplate {
     /**
-     * Affiche le contenu HTML de la page des entreprises.
+     * Génère le contenu HTML de la page de liste des entreprises.
+     * 
+     * Crée un tableau avec toutes les entreprises récupérées, affiche
+     * leurs informations (nom, secteur, commercial) et ajoute un formulaire
+     * caché pour gérer les clics sur les lignes du tableau.
      *
-     * @param array $datas Données à utiliser pour le template.
-     * @return string The full HTML page.
+     * @param array $datas Tableau contenant 'companies' (liste des entreprises) et 'sectors' (secteurs uniques).
+     * @return string HTML complet de la page de liste des entreprises.
      */
-    public function displayCompanies($datas): string {
+    public function displayCompanies(array $datas = []): string {
         $companiesContent = <<<HTML
         <!-- Titre de la page et bouton d'ajout -->
         <div class="mb-8 flex justify-between items-center">
@@ -43,27 +51,35 @@ class CompaniesTemplate {
                 <tbody class="bg-white divide-y divide-gray-200">
         HTML;
 
-        // Génération des lignes du tableau avec les données des entreprises
+        // Génération dynamique des lignes du tableau pour chaque entreprise
         foreach ($datas['companies'] as $company) {
-            // Construction du nom du commercial
+            // Construction du nom complet du commercial avec gestion du cas "non assigné"
+            // Affiche "Prénom Nom" si les deux sont présents, sinon "Non assigné"
             $salesmanName = 'Non assigné';
             if (!empty($company['firstname']) && !empty($company['lastname'])) {
                 $salesmanName = ucfirst($company['firstname']) . ' ' . ucfirst($company['lastname']);
             }
             
-            // Conversion du nom de l'entreprise en majuscules
+            // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
+            // Facilite la lecture et maintient un style uniforme dans le tableau
             $companyNameUpper = strtoupper($company['company_name']);
             
+            // Échappement XSS de toutes les valeurs pour éviter les injections
+            $companyId = htmlspecialchars($company['company_id']);
+            $companyName = htmlspecialchars($companyNameUpper);
+            $sectorName = htmlspecialchars($company['sector_name']);
+            $salesmanName = htmlspecialchars($salesmanName);
+            
             $companiesContent .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$company['company_id']}')">
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$companyId}')">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
-                                {$companyNameUpper}
+                                {$companyName}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
-                                {$company['sector_name']}
+                                {$sectorName}
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
@@ -80,11 +96,15 @@ class CompaniesTemplate {
             </table>
         </div>
 
+        <!-- Formulaire caché pour soumettre l'ID de l'entreprise lors du clic sur une ligne -->
+        <!-- Permet de naviguer vers la page de modification sans formulaire visible -->
         <form action="/modify-company" method="POST" id="company-form">
             <input type="hidden" name="companyId" id="companyId" value="0" required>
             <input type="hidden" name="renderModifyCompany" id="renderModifyCompany" value="true" required>
         </form>
 
+        <!-- Script JavaScript pour gérer le clic sur les lignes du tableau -->
+        <!-- Insère l'ID de l'entreprise dans le formulaire et le soumet automatiquement -->
         <script>
             function submitForm(companyId) {
                 document.getElementById('companyId').value = companyId;

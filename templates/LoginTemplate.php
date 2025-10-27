@@ -4,15 +4,22 @@ namespace Templates;
 
 /**
  * Classe LoginTemplate
+ * 
  * Gère l'affichage du template de la page de connexion.
+ * Crée un formulaire d'authentification centré avec une interface moderne
+ * et responsive. Ne nécessite pas de header/footer car layout complet.
  */
 class LoginTemplate
 {
     /**
-     * Affiche le contenu HTML de la page de connexion.
+     * Génère le contenu HTML de la page de connexion.
+     * 
+     * Crée un formulaire d'authentification avec les champs email et mot de passe.
+     * Le formulaire soumet vers /user en POST pour traitement par UserController.
+     * Design centré et responsive pour une bonne expérience mobile.
      *
-     * @param array $datas Les données à passer au template.
-     * @return string Le contenu HTML de la page.
+     * @param array $datas Les données à passer au template (non utilisées actuellement).
+     * @return string HTML complet de la page de connexion.
      */
     public function displayLogin(array $datas = []): string
     {

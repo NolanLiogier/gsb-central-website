@@ -3,14 +3,23 @@
 namespace Templates;
 
 /**
- * Template pour la page d'erreur 404
- * Affiche une page d'erreur élégante quand une ressource n'est pas trouvée
+ * Classe NotFoundTemplate
+ * 
+ * Gère l'affichage du template de la page d'erreur 404.
+ * Crée une page d'erreur élégante avec design moderne cohérent avec
+ * le reste de l'application. Inclut des liens de navigation (retour accueil,
+ * page précédente) et informations de débogage (timestamp).
  */
 class NotFoundTemplate
 {
     /**
-     * Génère le contenu HTML de la page 404 avec un design moderne
-     * @return string - HTML complet de la page 404
+     * Génère le contenu HTML de la page 404.
+     * 
+     * Crée une page d'erreur centrée avec icône, titre "404", message
+     * explicatif et boutons d'action (retour accueil, précédent, contact).
+     * Inclut un timestamp pour le débogage. Design responsive et moderne.
+     * 
+     * @return string HTML complet de la page 404.
      */
     public function displayNotFound(): string
     {

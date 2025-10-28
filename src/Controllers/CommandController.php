@@ -114,21 +114,16 @@ class CommandController {
 
         // Gestion des actions POST spécifiques (affichage formulaire ou mise à jour)
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            // Action pour afficher le formulaire de modification d'une commande
-            if (isset($_POST['commandId']) && isset($_POST['renderModifyCommand'])) {
-                $this->renderModifyCommand((int)$_POST['commandId']);
-                exit;
-            }
-
-            // Action pour mettre à jour les données d'une commande
-            if (isset($_POST['commandId']) && isset($_POST['updateCommand'])) {
-                $this->updateCommand($_POST);
-                exit;
-            }
 
             // Action pour afficher le formulaire d'ajout d'une nouvelle commande
             if (isset($_POST['newCommand']) && isset($_POST['renderAddCommand'])) {
                 $this->renderAddCommand();
+                exit;
+            }
+
+            // Action pour afficher le formulaire de modification d'une commande
+            if (isset($_POST['commandId']) && isset($_POST['renderModifyCommand'])) {
+                $this->renderModifyCommand((int)$_POST['commandId']);
                 exit;
             }
 
@@ -138,18 +133,17 @@ class CommandController {
                 exit;
             }
 
+            // Action pour mettre à jour les données d'une commande
+            if (isset($_POST['commandId']) && isset($_POST['updateCommand'])) {
+                $this->updateCommand($_POST);
+                exit;
+            }
+
             // Action pour supprimer une commande
             if (isset($_POST['commandId']) && isset($_POST['deleteCommand'])) {
                 $this->deleteCommand((int)$_POST['commandId']);
                 exit;
             }
-        }
-
-        // Gestion des routes GET spécifiques
-        $currentRoute = $_SERVER['REQUEST_URI'] ?? '/';
-        if ($currentRoute === '/ModifyCommand') {
-            $this->renderAddCommand();
-            exit;
         }
 
         // Récupération de l'utilisateur actuel
@@ -192,8 +186,35 @@ class CommandController {
         $datas['statusList'] = $statusList;
         
         // Récupération des produits en stock pour la sélection
-        $products = $this->stockRepository->getAllProducts();
-        $datas['products'] = $products;
+        $allProducts = $this->stockRepository->getAllProducts();
+        
+        // Récupération des produits existants de la commande
+        $existingCommandProducts = $datas['products'] ?? [];
+        
+        // Fusion des produits : ajouter les quantités commandées aux produits en stock
+        $mergedProducts = [];
+        foreach ($allProducts as $product) {
+            $productId = $product['product_id'];
+            $mergedProduct = $product;
+            
+            // Chercher si ce produit existe déjà dans la commande
+            foreach ($existingCommandProducts as $existingProduct) {
+                if ($existingProduct['product_id'] == $productId) {
+                    // Ajouter la quantité commandée aux données du produit
+                    $mergedProduct['ordered_quantity'] = $existingProduct['quantity'];
+                    break;
+                }
+            }
+            
+            // Si le produit n'était pas dans la commande, quantité commandée = 0
+            if (!isset($mergedProduct['ordered_quantity'])) {
+                $mergedProduct['ordered_quantity'] = 0;
+            }
+            
+            $mergedProducts[] = $mergedProduct;
+        }
+        
+        $datas['products'] = $mergedProducts;
         
         $this->renderService->displayTemplates("ModifyCommands", $datas, "Modifier la commande");
         exit;
@@ -302,8 +323,20 @@ class CommandController {
             'fk_status_id' => (int)($datas['statusId'] ?? 1)
         ];
 
+        // Récupération et traitement des données des produits
+        $products = $datas['products'] ?? [];
+        
+        // Filtrer les produits avec une quantité > 0
+        $filteredProducts = [];
+        foreach ($products as $productId => $productData) {
+            $quantity = (int)($productData['quantity'] ?? 0);
+            if ($quantity > 0) {
+                $filteredProducts[$productId] = ['quantity' => $quantity];
+            }
+        }
+
         // Tentative de mise à jour dans la base de données
-        $updateStatus = $this->commandRepository->updateCommand($commandData);
+        $updateStatus = $this->commandRepository->updateCommand($commandData, $filteredProducts);
         
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$updateStatus) {

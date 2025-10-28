@@ -27,7 +27,16 @@ class ModifyCommandsTemplate {
 
         // Préparation des données pour l'affichage
         $commandId = htmlspecialchars($datas['command_id'] ?? 0);
-        $deliveryDate = isset($datas['delivery_date']) ? htmlspecialchars(date('Y-m-d\TH:i', strtotime($datas['delivery_date']))) : date('Y-m-d\TH:i');
+        
+        // Date par défaut: demain à midi
+        if (isset($datas['delivery_date'])) {
+            $deliveryDate = htmlspecialchars(date('Y-m-d\TH:i', strtotime($datas['delivery_date'])));
+        } else {
+            // Créer une nouvelle commande: demain à 12:00
+            $tomorrow = strtotime('+1 day');
+            $deliveryDate = date('Y-m-d', $tomorrow) . 'T12:00';
+        }
+        
         $statusId = htmlspecialchars($datas['fk_status_id'] ?? '1');
         $createdAt = isset($datas['created_at']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($datas['created_at']))) : '-';
 
@@ -37,7 +46,6 @@ class ModifyCommandsTemplate {
         // Détection du mode (modification ou création)
         $isEditMode = !empty($commandId) && $commandId != '0';
         $pageTitle = $isEditMode ? "Modifier la commande" : "Créer une commande";
-        $showDeleteButton = $isEditMode;
         $actionUrl = "/ModifyCommand";
 
         $modifyCommandContent = <<<HTML
@@ -46,11 +54,11 @@ class ModifyCommandsTemplate {
     <h1 class="text-3xl font-bold text-gray-900">{$pageTitle}</h1>
 </div>
 
-<!-- Formulaire principal -->
-<form method="POST" action="{$actionUrl}" class="space-y-8">
+<!-- Formulaire principal pour sauvegarder les informations -->
+<form method="POST" action="{$actionUrl}">
     <!-- Champs cachés pour l'ID de la commande et le flag de mise à jour -->
 HTML;
-
+        
         if ($isEditMode) {
             $modifyCommandContent .= "<input type=\"hidden\" name=\"commandId\" value=\"{$commandId}\">";
             $modifyCommandContent .= "<input type=\"hidden\" name=\"updateCommand\" value=\"true\">";
@@ -62,9 +70,12 @@ HTML;
         $modifyCommandContent .= <<<HTML
 
     <!-- Sélection des produits -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 class="text-xl font-semibold text-gray-800 mb-6">Sélectionner les produits</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800">Sélectionner les produits</h2>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
 HTML;
 
         // Récupération des produits depuis les données
@@ -76,33 +87,43 @@ HTML;
             $productName = htmlspecialchars($product['product_name']);
             $price = htmlspecialchars(number_format($product['price'], 2, ',', ' '));
             $quantity = htmlspecialchars($product['quantity']);
+            $orderedQuantity = htmlspecialchars($product['ordered_quantity'] ?? 0);
             $stockStatus = $quantity > 0 ? 'En stock' : 'Rupture';
             $stockClass = $quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
             
             $modifyCommandContent .= <<<HTML
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div class="product-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:border-blue-300" data-product-id="{$productId}">
                 <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">{$productName}</h3>
-                    <span class="{$stockClass} px-2 py-1 rounded-full text-xs font-medium">
+                    <h3 class="text-base font-semibold text-gray-900 leading-tight">{$productName}</h3>
+                    <span class="{$stockClass} px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ml-2">
                         {$stockStatus}: {$quantity}
                     </span>
                 </div>
                 
                 <div class="mb-4">
-                    <span class="text-2xl font-bold text-blue-600">{$price} €</span>
+                    <div class="flex items-baseline space-x-1">
+                        <span class="text-xl font-bold text-blue-600">{$price} €</span>
+                        <span class="text-xs text-gray-500">par unité</span>
+                    </div>
                 </div>
                 
-                <div class="flex items-center space-x-3">
-                    <label class="text-sm font-medium text-gray-700">Quantité</label>
-                    <div class="flex items-center border border-gray-300 rounded-lg">
-                        <button type="button" onclick="decreaseQuantity('{$productId}')" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-l-lg">
-                            <i class="fas fa-minus text-sm"></i>
-                        </button>
-                        <input type="number" id="quantity-{$productId}" name="products[{$productId}][quantity]" value="0" min="0" max="{$quantity}" 
-                               class="w-16 text-center border-0 focus:ring-0 focus:outline-none" readonly>
-                        <button type="button" onclick="increaseQuantity('{$productId}', {$quantity})" class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-r-lg">
-                            <i class="fas fa-plus text-sm"></i>
-                        </button>
+                <div class="space-y-3">
+                    <label class="block text-xs font-medium text-gray-700">Quantité commandée</label>
+                    <div class="flex items-center justify-start">
+                        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden bg-white">
+                            <button type="button" onclick="decreaseQuantity('{$productId}')" 
+                                    class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    id="decrease-btn-{$productId}">
+                                <i class="fas fa-minus text-xs"></i>
+                            </button>
+                            <input type="number" id="quantity-{$productId}" name="products[{$productId}][quantity]" value="{$orderedQuantity}" min="0" max="{$quantity}" 
+                                   class="w-16 text-center border-0 focus:ring-0 focus:outline-none font-medium text-sm text-gray-900 bg-white">
+                            <button type="button" onclick="increaseQuantity('{$productId}', {$quantity})" 
+                                    class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    id="increase-btn-{$productId}">
+                                <i class="fas fa-plus text-xs"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -114,7 +135,7 @@ HTML;
     </div>
 
     <!-- Récapitulatif de la commande -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
         <h2 class="text-xl font-semibold text-gray-800 mb-6">Récapitulatif de la commande</h2>
         
         <div id="order-summary" class="space-y-3 mb-6">
@@ -141,7 +162,7 @@ HTML;
     </div>
 
     <!-- Informations de la commande -->
-    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
+    <div class="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden mb-8">
         <!-- En-tête du formulaire -->
         <div class="bg-white px-8 py-6 border-b border-gray-100">
             <div class="flex items-center justify-between">
@@ -150,8 +171,8 @@ HTML;
                 </div>
 HTML;
         
-        // Bouton supprimer uniquement en mode modification
-        if ($showDeleteButton) {
+        // Formulaire de suppression à droite du titre (uniquement en mode modification)
+        if ($isEditMode && $commandId && $commandId != '0') {
             $modifyCommandContent .= <<<HTML
                 <form method="POST" action="{$actionUrl}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette commande ?');" class="inline-block">
                     <input type="hidden" name="commandId" value="{$commandId}">
@@ -163,8 +184,9 @@ HTML;
                         Supprimer
                     </button>
                 </form>
-HTML;
-        } else {
+        HTML;
+        } 
+        else {
             $modifyCommandContent .= '<div></div>';
         }
 
@@ -218,14 +240,14 @@ HTML;
                         name="statusId" 
                         required
                         class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900">
-HTML;
+        HTML;
 
         // Génération dynamique des options de statut
         foreach ($statusList as $status) {
-            $statusId = htmlspecialchars($status['status_id']);
+            $statusIdValue = htmlspecialchars($status['status_id']);
             $statusName = htmlspecialchars($status['status_name']);
-            $selected = ($statusId === $statusId) ? 'selected' : '';
-            $modifyCommandContent .= "<option value=\"{$statusId}\" {$selected}>{$statusName}</option>";
+            $selected = ($statusIdValue === $statusId) ? 'selected' : '';
+            $modifyCommandContent .= "<option value=\"{$statusIdValue}\" {$selected}>{$statusName}</option>";
         }
 
         $modifyCommandContent .= <<<HTML
@@ -272,6 +294,25 @@ HTML;
 
 <!-- Import du script de gestion des commandes -->
 <script src="/public/assets/js/modify-commands.js"></script>
+
+<!-- Styles personnalisés pour l'espacement des cartes -->
+<style>
+.product-card {
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .product-card {
+        margin-bottom: 2rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .product-card {
+        margin-bottom: 2rem;
+    }
+}
+</style>
 
 HTML;
 

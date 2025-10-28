@@ -171,12 +171,13 @@ class CommandRepository {
      * Met à jour les informations d'une commande dans la base de données.
      * 
      * Valide les données de la commande, vérifie la présence des champs requis,
-     * et met à jour toutes les informations de la commande.
+     * et met à jour toutes les informations de la commande incluant les produits.
      *
      * @param array $commandData Données de la commande à mettre à jour (command_id, delivery_date, fk_status_id).
+     * @param array $products Données des produits sélectionnés avec leurs quantités.
      * @return bool True si la mise à jour a réussi, false en cas d'erreur ou de données invalides.
      */
-    public function updateCommand(array $commandData): bool {
+    public function updateCommand(array $commandData, array $products = []): bool {
         try {
             // Vérification de la connexion avant toute opération
             if (!$this->connection) {
@@ -188,6 +189,9 @@ class CommandRepository {
                 empty($commandData['fk_status_id'])) {
                 return false;
             }
+
+            // Début de la transaction pour assurer la cohérence des données
+            $this->connection->beginTransaction();
 
             // Préparation de la requête UPDATE avec paramètres nommés pour éviter les injections SQL
             $query = "UPDATE commands 
@@ -202,10 +206,53 @@ class CommandRepository {
             $stmt->bindParam(':delivery_date', $commandData['delivery_date'], PDO::PARAM_STR);
             $stmt->bindParam(':fk_status_id', $commandData['fk_status_id'], PDO::PARAM_INT);
             
-            return $stmt->execute();
+            if (!$stmt->execute()) {
+                $this->connection->rollBack();
+                return false;
+            }
+
+            // Mise à jour des détails des produits si fournis
+            if (!empty($products)) {
+                // Supprimer les anciens détails de la commande
+                $deleteQuery = "DELETE FROM command_details WHERE fk_command_id = :command_id";
+                $deleteStmt = $this->connection->prepare($deleteQuery);
+                $deleteStmt->bindParam(':command_id', $commandData['command_id'], PDO::PARAM_INT);
+                
+                if (!$deleteStmt->execute()) {
+                    $this->connection->rollBack();
+                    return false;
+                }
+
+                // Insérer les nouveaux détails des produits
+                $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, created_at) 
+                                VALUES (:command_id, :product_id, NOW())";
+                $detailsStmt = $this->connection->prepare($detailsQuery);
+
+                foreach ($products as $productId => $productData) {
+                    $quantity = (int)($productData['quantity'] ?? 0);
+                    
+                    // Insérer une ligne pour chaque quantité du produit
+                    for ($i = 0; $i < $quantity; $i++) {
+                        $detailsStmt->bindParam(':command_id', $commandData['command_id'], PDO::PARAM_INT);
+                        $detailsStmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
+                        
+                        if (!$detailsStmt->execute()) {
+                            $this->connection->rollBack();
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            // Validation de la transaction
+            $this->connection->commit();
+            return true;
             
         } catch (PDOException $e) {
-            // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
+            // En cas d'erreur, annulation de la transaction
+            if ($this->connection->inTransaction()) {
+                $this->connection->rollBack();
+            }
             return false;
         }
     }

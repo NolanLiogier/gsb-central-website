@@ -39,9 +39,6 @@ class CommandsTemplate {
                 <thead class="bg-gray-50">
                     <tr>
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            ID COMMANDE
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
                             DATE DE LIVRAISON
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
@@ -63,7 +60,7 @@ class CommandsTemplate {
             // Message à afficher lorsqu'il n'y a aucune commande
             $commandContent .= <<<HTML
                     <tr>
-                        <td colspan="4" class="px-6 py-12 text-center">
+                        <td colspan="3" class="px-6 py-12 text-center">
                             <div class="text-gray-500">
                                 <i class="fas fa-shopping-cart text-4xl mb-4"></i>
                                 <p class="text-lg font-medium">Aucune commande</p>
@@ -80,15 +77,10 @@ class CommandsTemplate {
                 $commandId = htmlspecialchars($command['command_id']);
                 $deliveryDate = isset($command['delivery_date']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['delivery_date']))) : '-';
                 $createdAt = isset($command['created_at']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['created_at']))) : '-';
-                $statusId = htmlspecialchars($command['fk_status_id'] ?? '-');
+                $statusName = htmlspecialchars($command['status_name'] ?? '-');
                 
                 $commandContent .= <<<HTML
                     <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$commandId}')">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">
-                                #{$commandId}
-                            </div>
-                        </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
                                 {$deliveryDate}
@@ -101,7 +93,7 @@ class CommandsTemplate {
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">
-                                Statut: {$statusId}
+                                {$statusName}
                             </div>
                         </td>
                     </tr>

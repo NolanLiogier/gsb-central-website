@@ -39,7 +39,7 @@ class StockRepository {
      * Récupère toutes les informations des produits disponibles en stock,
      * triés par nom de produit pour faciliter la lecture.
      *
-     * @return array Liste des produits avec leurs informations (id_product, product_name, quantity, price).
+     * @return array Liste des produits avec leurs informations (product_id, product_name, quantity, price).
      */
     public function getAllProducts(): array {
         try {
@@ -49,7 +49,7 @@ class StockRepository {
             }
 
             // Récupération de tous les produits triés par nom pour faciliter la navigation
-            $query = "SELECT id_product, product_name, quantity, price 
+            $query = "SELECT product_id, product_name, quantity, price 
                       FROM stock 
                       ORDER BY product_name";
             
@@ -70,7 +70,7 @@ class StockRepository {
      * Récupère toutes les informations nécessaires pour l'édition d'un produit.
      *
      * @param int $productId ID du produit à récupérer.
-     * @return array Données du produit avec id_product, product_name, quantity, price, ou tableau vide.
+     * @return array Données du produit avec product_id, product_name, quantity, price, ou tableau vide.
      */
     public function getProductById(int $productId): array {
         try {
@@ -79,9 +79,9 @@ class StockRepository {
                 return [];
             }
 
-            $query = "SELECT id_product, product_name, quantity, price 
+            $query = "SELECT product_id, product_name, quantity, price 
                       FROM stock 
-                      WHERE id_product = :product_id";
+                      WHERE product_id = :product_id";
             
             $stmt = $this->connection->prepare($query);
             $stmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
@@ -105,7 +105,7 @@ class StockRepository {
      * et met à jour toutes les informations du produit. La quantité doit
      * être positive et le prix doit être valide.
      *
-     * @param array $productData Données du produit à mettre à jour (id_product, product_name, quantity, price).
+     * @param array $productData Données du produit à mettre à jour (product_id, product_name, quantity, price).
      * @return bool True si la mise à jour a réussi, false en cas d'erreur ou de données invalides.
      */
     public function updateProduct(array $productData): bool {
@@ -116,7 +116,7 @@ class StockRepository {
             }
 
             // Validation de la présence des champs obligatoires
-            if (empty($productData['id_product']) || empty($productData['product_name']) || 
+            if (empty($productData['product_id']) || empty($productData['product_name']) || 
                 empty($productData['quantity']) || empty($productData['price'])) {
                 return false;
             }
@@ -136,12 +136,12 @@ class StockRepository {
                       SET product_name = :product_name, 
                           quantity = :quantity, 
                           price = :price
-                      WHERE id_product = :product_id";
+                      WHERE product_id = :product_id";
             
             $stmt = $this->connection->prepare($query);
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
-            $stmt->bindParam(':product_id', $productData['id_product'], PDO::PARAM_INT);
+            $stmt->bindParam(':product_id', $productData['product_id'], PDO::PARAM_INT);
             $stmt->bindParam(':product_name', $productData['product_name'], PDO::PARAM_STR);
             $stmt->bindParam(':quantity', $productData['quantity'], PDO::PARAM_INT);
             $stmt->bindParam(':price', $productData['price'], PDO::PARAM_STR);
@@ -170,7 +170,7 @@ class StockRepository {
                 return false;
             }
 
-            // Validation de la présence des champs obligatoires (sans id_product car c'est une création)
+            // Validation de la présence des champs obligatoires (sans product_id car c'est une création)
             if (empty($productData['product_name']) || empty($productData['quantity']) || 
                 empty($productData['price'])) {
                 return false;
@@ -223,7 +223,7 @@ class StockRepository {
             }
 
             // Préparation de la requête DELETE avec paramètre nommé pour éviter les injections SQL
-            $query = "DELETE FROM stock WHERE id_product = :product_id";
+            $query = "DELETE FROM stock WHERE product_id = :product_id";
             
             $stmt = $this->connection->prepare($query);
             $stmt->bindParam(':product_id', $productId, PDO::PARAM_INT);

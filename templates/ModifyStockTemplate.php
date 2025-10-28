@@ -17,7 +17,7 @@ class ModifyStockTemplate {
      * et prix (nombre décimal positif). Inclut des boutons d'annulation
      * et de sauvegarde.
      *
-     * @param array $datas Données du produit (id_product, product_name, quantity, price).
+     * @param array $datas Données du produit (product_id, product_name, quantity, price).
      * @return string HTML complet du formulaire de modification.
      */
     public function displayModifyStock(array $datas = []): string {
@@ -29,7 +29,7 @@ class ModifyStockTemplate {
         $productName = htmlspecialchars($datas['product_name'] ?? '');
         $quantity = htmlspecialchars($datas['quantity'] ?? '0');
         $price = htmlspecialchars($datas['price'] ?? '0');
-        $productIdValue = htmlspecialchars($datas['id_product'] ?? 0);
+        $productIdValue = htmlspecialchars($datas['product_id'] ?? 0);
 
         // Détection du mode et récupération des textes appropriés
         $modeData = $this->determineMode($datas);
@@ -168,12 +168,12 @@ HTML;
      * ou si on est en train de créer un nouveau produit (mode création).
      * Retourne un tableau avec les informations nécessaires (mode, titres, textes des boutons).
      *
-     * @param array $datas Données du produit avec éventuellement un id_product.
+     * @param array $datas Données du produit avec éventuellement un product_id.
      * @return array Tableau contenant ['isEditMode', 'pageTitle', 'buttonText'].
      */
     private function determineMode(array $datas): array {
         $isEditMode = false;
-        if (!empty($datas['id_product']) && $datas['id_product'] != '0') {
+        if (!empty($datas['product_id']) && $datas['product_id'] != '0') {
             $isEditMode = true;
         }
 

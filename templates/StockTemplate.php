@@ -83,7 +83,7 @@ class StockTemplate {
                 $totalValue = (float)($product['quantity'] ?? 0) * (float)($product['price'] ?? 0);
                 
                 // Échappement XSS de toutes les valeurs pour éviter les injections
-                $productId = htmlspecialchars($product['id_product']);
+                $productId = htmlspecialchars($product['product_id']);
                 $productName = htmlspecialchars(strtoupper($product['product_name']));
                 $quantity = htmlspecialchars($product['quantity']);
                 $price = number_format((float)($product['price'] ?? 0), 2, ',', ' ') . ' €';

@@ -156,9 +156,6 @@ class UserController
         // Destruction de la session
         session_destroy();
         
-        // Message de confirmation de déconnexion
-        $this->statusMessageService->setMessage('Déconnexion réussie', 'success');
-        
         // Redirection vers la page de connexion
         $this->router->getRoute('/login');
         exit;

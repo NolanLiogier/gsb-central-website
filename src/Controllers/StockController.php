@@ -235,7 +235,7 @@ class StockController {
         
         // Normalisation des données : trim pour supprimer les espaces et gestion des valeurs par défaut
         $productData = [
-            'id_product' => $productId,
+            'product_id' => $productId,
             'product_name' => trim($datas['productName'] ?? ''),
             'quantity' => (int)($datas['quantity'] ?? 0),
             'price' => (float)($datas['price'] ?? 0)

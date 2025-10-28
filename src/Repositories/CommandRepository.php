@@ -59,6 +59,93 @@ class CommandRepository {
     }
 
     /**
+     * Récupère toutes les commandes selon le rôle et les permissions de l'utilisateur.
+     * 
+     * Récupère les commandes selon les règles métier :
+     * - Client (function_id = 2) : toutes les commandes de son entreprise
+     * - Commercial (function_id = 1) : commandes des entreprises qui lui sont assignées
+     * - Logisticien (function_id = 3) : toutes les commandes avec statut "validé" (1)
+     *
+     * @param array $user Informations de l'utilisateur (user_id, fk_company_id, fk_function_id).
+     * @return array Liste des commandes avec leurs informations et produits.
+     */
+    public function getCommandsByUserRole(array $user): array {
+        try {
+            // Vérification de la connexion avant la requête
+            if (!$this->connection) {
+                return [];
+            }
+
+            $userFunctionId = $user['fk_function_id'] ?? null;
+            $userCompanyId = $user['fk_company_id'] ?? null;
+            $userId = $user['user_id'] ?? null;
+
+            $query = "";
+            $params = [];
+
+            // Construction de la requête selon le rôle
+            if ($userFunctionId == 2) { // Client
+                // Client : toutes les commandes de son entreprise
+                $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                                 u.firstname, u.lastname, u.email
+                          FROM commands c
+                          LEFT JOIN status s ON c.fk_status_id = s.status_id
+                          LEFT JOIN users u ON c.fk_user_id = u.user_id
+                          WHERE u.fk_company_id = :company_id
+                          ORDER BY c.created_at DESC";
+                $params[':company_id'] = $userCompanyId;
+                
+            } elseif ($userFunctionId == 1) { // Commercial
+                // Commercial : commandes des entreprises qui lui sont assignées
+                $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                                 u.firstname, u.lastname, u.email, comp.company_name
+                          FROM commands c
+                          LEFT JOIN status s ON c.fk_status_id = s.status_id
+                          LEFT JOIN users u ON c.fk_user_id = u.user_id
+                          LEFT JOIN companies comp ON u.fk_company_id = comp.company_id
+                          WHERE comp.fk_salesman_id = :salesman_id
+                          ORDER BY c.created_at DESC";
+                $params[':salesman_id'] = $userId;
+                
+            } elseif ($userFunctionId == 3) { // Logisticien
+                // Logisticien : toutes les commandes avec statut "validé" (1)
+                $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                                 u.firstname, u.lastname, u.email, comp.company_name
+                          FROM commands c
+                          LEFT JOIN status s ON c.fk_status_id = s.status_id
+                          LEFT JOIN users u ON c.fk_user_id = u.user_id
+                          LEFT JOIN companies comp ON u.fk_company_id = comp.company_id
+                          WHERE c.fk_status_id = 1
+                          ORDER BY c.created_at DESC";
+            } else {
+                // Rôle non reconnu
+                return [];
+            }
+            
+            $stmt = $this->connection->prepare($query);
+            
+            // Bind des paramètres
+            foreach ($params as $param => $value) {
+                $stmt->bindValue($param, $value, PDO::PARAM_INT);
+            }
+            
+            $stmt->execute();
+            $commands = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Pour chaque commande, récupérer les détails des produits
+            foreach ($commands as &$command) {
+                $command['products'] = $this->getCommandProducts($command['command_id']);
+            }
+            
+            return $commands;
+            
+        } catch (PDOException $e) {
+            // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
+            return [];
+        }
+    }
+
+    /**
      * Récupère toutes les commandes d'un utilisateur spécifique.
      * 
      * Récupère toutes les informations des commandes d'un utilisateur,
@@ -340,6 +427,107 @@ class CommandRepository {
     }
 
     /**
+     * Vérifie si un utilisateur peut modifier/supprimer une commande selon son statut et son rôle.
+     * 
+     * Règles métier :
+     * - Client : peut modifier/supprimer UNIQUEMENT si statut = "en attente" (3)
+     * - Commercial : peut modifier/supprimer et valider les commandes
+     * - Logisticien : peut seulement envoyer les commandes validées
+     *
+     * @param array $user Informations de l'utilisateur (user_id, fk_function_id).
+     * @param int $commandId ID de la commande à vérifier.
+     * @param string $action Action à vérifier ('modify', 'delete', 'validate', 'send').
+     * @return bool True si l'utilisateur peut effectuer l'action, false sinon.
+     */
+    public function canUserPerformAction(array $user, int $commandId, string $action): bool {
+        try {
+            // Récupération des informations de la commande
+            $command = $this->getCommandById($commandId);
+            if (empty($command)) {
+                return false;
+            }
+
+            $userFunctionId = $user['fk_function_id'] ?? null;
+            $commandStatusId = $command['fk_status_id'] ?? null;
+
+            // Vérification selon le rôle et l'action
+            switch ($action) {
+                case 'modify':
+                    if ($userFunctionId == 2) { // Client
+                        // Client : seulement si statut = "en attente" (3)
+                        return $commandStatusId == 3;
+                    } elseif ($userFunctionId == 1) { // Commercial
+                        // Commercial : peut modifier toutes les commandes de ses clients
+                        return $this->isCommandFromSalesmanClient($user['user_id'], $commandId);
+                    } elseif ($userFunctionId == 3) { // Logisticien
+                        // Logisticien : peut voir toutes les commandes (lecture seule)
+                        return true;
+                    }
+                    return false;
+
+                case 'delete':
+                    if ($userFunctionId == 2) { // Client
+                        // Client : seulement si statut = "en attente" (3)
+                        return $commandStatusId == 3;
+                    } elseif ($userFunctionId == 1) { // Commercial
+                        // Commercial : peut supprimer toutes les commandes de ses clients
+                        return $this->isCommandFromSalesmanClient($user['user_id'], $commandId);
+                    }
+                    return false;
+
+                case 'validate':
+                    if ($userFunctionId == 1) { // Commercial
+                        // Commercial : peut valider seulement les commandes "en attente" (3)
+                        return $commandStatusId == 3 && $this->isCommandFromSalesmanClient($user['user_id'], $commandId);
+                    }
+                    return false;
+
+                case 'send':
+                    if ($userFunctionId == 3) { // Logisticien
+                        // Logisticien : peut envoyer seulement les commandes "validé" (1)
+                        return $commandStatusId == 1;
+                    }
+                    return false;
+
+                default:
+                    return false;
+            }
+            
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Vérifie si une commande appartient à un client d'un commercial spécifique.
+     * 
+     * @param int $salesmanId ID du commercial.
+     * @param int $commandId ID de la commande.
+     * @return bool True si la commande appartient à un client du commercial, false sinon.
+     */
+    private function isCommandFromSalesmanClient(int $salesmanId, int $commandId): bool {
+        try {
+            $query = "SELECT COUNT(*) as count
+                      FROM commands c
+                      JOIN users u ON c.fk_user_id = u.user_id
+                      JOIN companies comp ON u.fk_company_id = comp.company_id
+                      WHERE c.command_id = :command_id 
+                      AND comp.fk_salesman_id = :salesman_id";
+            
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
+            $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return ($result['count'] ?? 0) > 0;
+            
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
      * Supprime une commande de la base de données.
      * 
      * Supprime l'enregistrement de la commande spécifiée par son ID.
@@ -366,6 +554,43 @@ class CommandRepository {
             
         } catch (PDOException $e) {
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
+            return false;
+        }
+    }
+
+    /**
+     * Met à jour le statut d'une commande selon l'action effectuée.
+     * 
+     * @param int $commandId ID de la commande.
+     * @param string $action Action effectuée ('validate' ou 'send').
+     * @return bool True si la mise à jour a réussi, false en cas d'erreur.
+     */
+    public function updateCommandStatus(int $commandId, string $action): bool {
+        try {
+            if (!$this->connection) {
+                return false;
+            }
+
+            $newStatusId = null;
+            switch ($action) {
+                case 'validate':
+                    $newStatusId = 1; // validé
+                    break;
+                case 'send':
+                    $newStatusId = 2; // envoyé
+                    break;
+                default:
+                    return false;
+            }
+
+            $query = "UPDATE commands SET fk_status_id = :status_id WHERE command_id = :command_id";
+            $stmt = $this->connection->prepare($query);
+            $stmt->bindParam(':status_id', $newStatusId, PDO::PARAM_INT);
+            $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
+            
+            return $stmt->execute();
+            
+        } catch (PDOException $e) {
             return false;
         }
     }

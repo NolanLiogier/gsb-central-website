@@ -78,6 +78,17 @@ HTML;
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
 HTML;
 
+        // Récupération des informations utilisateur (nécessaire pour les contrôles de lecture seule)
+        $currentUser = $datas['currentUser'] ?? [];
+        $userFunctionId = $currentUser['fk_function_id'] ?? null;
+        $isReadOnly = ($userFunctionId == 3);
+        
+        // Préparer les attributs conditionnels pour les boutons
+        $disabledAttr = $isReadOnly ? 'disabled' : '';
+        $readonlyAttr = $isReadOnly ? 'readonly' : '';
+        $disabledClass = $isReadOnly ? 'bg-gray-100 cursor-not-allowed' : '';
+        $disabledOpacityClass = $isReadOnly ? 'opacity-60 cursor-not-allowed' : '';
+        
         // Récupération des produits depuis les données
         $products = $datas['products'] ?? [];
         
@@ -112,13 +123,16 @@ HTML;
                     <div class="flex items-center justify-start">
                         <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden bg-white">
                             <button type="button" onclick="decreaseQuantity('{$productId}')" 
+                                    {$disabledAttr}
                                     class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     id="decrease-btn-{$productId}">
                                 <i class="fas fa-minus text-xs"></i>
                             </button>
                             <input type="number" id="quantity-{$productId}" name="products[{$productId}][quantity]" value="{$orderedQuantity}" min="0" max="{$quantity}" 
-                                   class="w-16 text-center border-0 focus:ring-0 focus:outline-none font-medium text-sm text-gray-900 bg-white">
+                                   {$readonlyAttr}
+                                   class="w-16 text-center border-0 focus:ring-0 focus:outline-none font-medium text-sm text-gray-900 bg-white {$disabledClass}">
                             <button type="button" onclick="increaseQuantity('{$productId}', {$quantity})" 
+                                    {$disabledAttr}
                                     class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                     id="increase-btn-{$productId}">
                                 <i class="fas fa-plus text-xs"></i>
@@ -171,8 +185,8 @@ HTML;
                 </div>
 HTML;
         
-        // Formulaire de suppression à droite du titre (uniquement en mode modification)
-        if ($isEditMode && $commandId && $commandId != '0') {
+        // Formulaire de suppression à droite du titre (uniquement en mode modification et si pas en lecture seule)
+        if ($isEditMode && $commandId && $commandId != '0' && !$isReadOnly) {
             $modifyCommandContent .= <<<HTML
                 <form method="POST" action="{$actionUrl}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette commande ?');" class="inline-block">
                     <input type="hidden" name="commandId" value="{$commandId}">
@@ -229,6 +243,14 @@ HTML;
                         required
                         class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900">
                 </div>
+HTML;
+
+        // Préparer le bouton de soumission selon le mode
+        $submitButton = $isReadOnly ? '' : '<button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm">Valider la commande</button>';
+        
+        // Affichage du statut selon le rôle
+        if ($userFunctionId != 2) { // Pas un client
+            $modifyCommandContent .= <<<HTML
 
                 <!-- Statut -->
                 <div>
@@ -239,30 +261,51 @@ HTML;
                         id="statusId" 
                         name="statusId" 
                         required
-                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900">
+                        {$disabledAttr}
+                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 {$disabledOpacityClass}">
         HTML;
 
-        // Génération dynamique des options de statut
-        foreach ($statusList as $status) {
-            $statusIdValue = htmlspecialchars($status['status_id']);
-            $statusName = htmlspecialchars($status['status_name']);
-            $selected = ($statusIdValue === $statusId) ? 'selected' : '';
-            $modifyCommandContent .= "<option value=\"{$statusIdValue}\" {$selected}>{$statusName}</option>";
+            // Génération dynamique des options de statut selon le rôle
+            foreach ($statusList as $status) {
+                $statusIdValue = htmlspecialchars($status['status_id']);
+                $statusName = htmlspecialchars($status['status_name']);
+                $selected = ($statusIdValue === $statusId) ? 'selected' : '';
+                
+                // Filtrer les statuts selon le rôle
+                $showStatus = true;
+                if ($userFunctionId == 1) { // Commercial
+                    // Commercial peut voir tous les statuts
+                    $showStatus = true;
+                } elseif ($userFunctionId == 3) { // Logisticien
+                    // Logisticien ne peut voir que "validé" et "envoyé"
+                    $showStatus = in_array($statusIdValue, ['1', '2']);
+                }
+                
+                if ($showStatus) {
+                    $modifyCommandContent .= "<option value=\"{$statusIdValue}\" {$selected}>{$statusName}</option>";
+                }
+            }
+
+            $modifyCommandContent .= <<<HTML
+                    </select>
+                </div>
+HTML;
+        } else {
+            // Client : statut fixé à "en attente" (3)
+            $modifyCommandContent .= <<<HTML
+
+                <!-- Statut (caché pour les clients) -->
+                <input type="hidden" name="statusId" value="3">
+HTML;
         }
 
         $modifyCommandContent .= <<<HTML
-                    </select>
-                </div>
             </div>
 
             <!-- Boutons d'action -->
             <div class="flex justify-end space-x-4 pt-8 mt-8 border-t border-gray-200">
                 <a href="/Commands" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>
-                <button 
-                    type="submit" 
-                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm">
-                    Valider la commande
-                </button>
+                {$submitButton}
             </div>
         </div>
     </div>

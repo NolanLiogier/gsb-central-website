@@ -144,18 +144,33 @@ class CommandController {
                 $this->deleteCommand((int)$_POST['commandId']);
                 exit;
             }
+
+            // Action pour valider une commande (Commercial)
+            if (isset($_POST['commandId']) && isset($_POST['validateCommand'])) {
+                $this->validateCommand((int)$_POST['commandId']);
+                exit;
+            }
+
+            // Action pour envoyer une commande (Logisticien)
+            if (isset($_POST['commandId']) && isset($_POST['sendCommand'])) {
+                $this->sendCommand((int)$_POST['commandId']);
+                exit;
+            }
         }
 
         // Récupération de l'utilisateur actuel
         $user = $this->getCurrentUser();
         $userId = $user['user_id'] ?? 0;
 
-        // Récupération des commandes de l'utilisateur
-        $datas = $this->commandRepository->getCommandsByUserId($userId);
+        // Récupération des commandes selon le rôle de l'utilisateur
+        $datas = $this->commandRepository->getCommandsByUserRole($user);
         
         if (empty($datas)) {
             $this->statusMessageService->setMessage('Aucune commande trouvée.', 'info');
         }
+
+        // Ajout des informations utilisateur pour les templates
+        $datas['currentUser'] = $user;
 
         // Affichage du template avec les données récupérées
         $this->renderService->displayTemplates("Commands", $datas);
@@ -166,18 +181,29 @@ class CommandController {
      * Prépare et affiche le formulaire de modification d'une commande.
      * 
      * Récupère les données de la commande pour le formulaire de modification.
+     * Vérifie les permissions avant d'autoriser la modification.
      *
      * @param int $commandId ID de la commande à modifier.
      * @return void
      */
     public function renderModifyCommand(int $commandId): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        // Vérification des permissions pour modifier la commande
+        if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'modify')) {
+            $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        }
+        
         // Récupération des données de la commande
         $datas = $this->commandRepository->getCommandById($commandId);
         
         // Vérification que la commande existe
         if (empty($datas)) {
             $this->statusMessageService->setMessage('Commande introuvable.', 'error');
-            $this->router->getRoute('/Commands');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
             exit;
         }
         
@@ -215,6 +241,7 @@ class CommandController {
         }
         
         $datas['products'] = $mergedProducts;
+        $datas['currentUser'] = $user;
         
         $this->renderService->displayTemplates("ModifyCommands", $datas, "Modifier la commande");
         exit;
@@ -231,6 +258,9 @@ class CommandController {
     public function renderAddCommand(): void {
         $datas = [];
         
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
         // Récupération des statuts disponibles pour les listes déroulantes
         $statusList = $this->commandRepository->getAllStatuses();
         $datas['statusList'] = $statusList ?? [];
@@ -238,6 +268,8 @@ class CommandController {
         // Récupération des produits en stock pour la sélection
         $products = $this->stockRepository->getAllProducts();
         $datas['products'] = $products ?? [];
+        
+        $datas['currentUser'] = $user;
         
         $this->renderService->displayTemplates("ModifyCommands", $datas, "Créer une commande");
         exit;
@@ -262,7 +294,7 @@ class CommandController {
         $commandData = [
             'user_id' => $userId,
             'delivery_date' => trim($datas['deliveryDate'] ?? ''),
-            'fk_status_id' => (int)($datas['statusId'] ?? 1)
+            'fk_status_id' => 3 // Par défaut, nouvelle commande = "en attente"
         ];
 
         // Vérification qu'au moins un produit est sélectionné
@@ -293,13 +325,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$createStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la création de la commande.', 'error');
-            $this->router->getRoute('/Commands');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été créée avec succès.', 'success');
-        $this->router->getRoute('/Commands');
+        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
         exit;
     }
 
@@ -308,13 +340,23 @@ class CommandController {
      * 
      * Nettoie les données du formulaire, tente la mise à jour en base, affiche un message
      * d'erreur en cas d'échec, ou redirige vers la liste des commandes avec un message
-     * de succès.
+     * de succès. Vérifie les permissions avant la mise à jour.
      *
      * @param array $datas Données brutes du formulaire POST.
      * @return void
      */
     public function updateCommand(array $datas): void {
         $commandId = $datas['commandId'] ?? '';
+        
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        // Vérification des permissions pour modifier la commande
+        if (!$this->commandRepository->canUserPerformAction($user, (int)$commandId, 'modify')) {
+            $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        }
         
         // Normalisation des données : trim pour supprimer les espaces et gestion des valeurs par défaut
         $commandData = [
@@ -341,13 +383,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$updateStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la mise à jour.', 'error');
-            $this->router->getRoute('/Commands');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('Les informations de la commande ont été mises à jour avec succès.', 'success');
-        $this->router->getRoute('/Commands');
+        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
         exit;
     }
 
@@ -356,24 +398,107 @@ class CommandController {
      * 
      * Tente la suppression en base, affiche un message d'erreur en cas d'échec,
      * ou redirige vers la liste des commandes avec un message de succès.
+     * Vérifie les permissions avant la suppression.
      *
      * @param int $commandId ID de la commande à supprimer.
      * @return void
      */
     public function deleteCommand(int $commandId): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        // Vérification des permissions pour supprimer la commande
+        if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'delete')) {
+            $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour supprimer cette commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        }
+        
         // Tentative de suppression dans la base de données
         $deleteStatus = $this->commandRepository->deleteCommand($commandId);
         
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$deleteStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la suppression de la commande.', 'error');
-            $this->router->getRoute('/Commands');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été supprimée avec succès.', 'success');
-        $this->router->getRoute('/Commands');
+        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        exit;
+    }
+
+    /**
+     * Traite la validation d'une commande par un commercial.
+     * 
+     * Change le statut de la commande de "en attente" (3) à "validé" (1).
+     * Vérifie les permissions avant la validation.
+     *
+     * @param int $commandId ID de la commande à valider.
+     * @return void
+     */
+    public function validateCommand(int $commandId): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        // Vérification des permissions pour valider la commande
+        if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'validate')) {
+            $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour valider cette commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        }
+        
+        // Tentative de mise à jour du statut dans la base de données
+        $updateStatus = $this->commandRepository->updateCommandStatus($commandId, 'validate');
+        
+        // Gestion de l'échec : affichage d'un message d'erreur
+        if (!$updateStatus) {
+            $this->statusMessageService->setMessage('Une erreur est survenue lors de la validation de la commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        } 
+
+        // Succès : message de confirmation et redirection vers la liste des commandes
+        $this->statusMessageService->setMessage('La commande a été validée avec succès.', 'success');
+        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        exit;
+    }
+
+    /**
+     * Traite l'envoi d'une commande par un logisticien.
+     * 
+     * Change le statut de la commande de "validé" (1) à "envoyé" (2).
+     * Vérifie les permissions avant l'envoi.
+     *
+     * @param int $commandId ID de la commande à envoyer.
+     * @return void
+     */
+    public function sendCommand(int $commandId): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        // Vérification des permissions pour envoyer la commande
+        if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'send')) {
+            $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour envoyer cette commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        }
+        
+        // Tentative de mise à jour du statut dans la base de données
+        $updateStatus = $this->commandRepository->updateCommandStatus($commandId, 'send');
+        
+        // Gestion de l'échec : affichage d'un message d'erreur
+        if (!$updateStatus) {
+            $this->statusMessageService->setMessage('Une erreur est survenue lors de l\'envoi de la commande.', 'error');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        } 
+
+        // Succès : message de confirmation et redirection vers la liste des commandes
+        $this->statusMessageService->setMessage('La commande a été envoyée avec succès.', 'success');
+        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
         exit;
     }
 }

@@ -49,7 +49,7 @@ class Router {
     private function hasAccessToRoute(string $route): bool
     {
         // Routes accessibles à tous sans authentification
-        if (in_array($route, ['/', '/login'])) {
+        if (in_array($route, ['/', '/login', '/logout'])) {
             return true;
         }
 
@@ -125,6 +125,7 @@ class Router {
         $controller = match ($route) {
             '/' => new UserController(),
             '/login' => new UserController(),
+            '/logout' => new UserController(),
             '/home' => new HomeController(),
             '/companies' => new CompaniesController(),
             '/modify-company' => new CompaniesController(),

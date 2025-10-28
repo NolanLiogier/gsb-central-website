@@ -61,12 +61,19 @@ class UserController
      * Point d'entrée principal du contrôleur d'authentification.
      * 
      * Route les requêtes : affiche le formulaire de connexion pour les requêtes GET,
-     * ou traite le formulaire soumis pour les requêtes POST avec email et password.
+     * traite le formulaire soumis pour les requêtes POST avec email et password,
+     * ou gère la déconnexion pour la route /logout.
      *
      * @return void
      */
     public function index(): void
     {
+        // Gestion de la déconnexion
+        if ($_SERVER['REQUEST_URI'] === '/logout') {
+            $this->logout();
+            exit;
+        }
+        
         // Vérification de la présence des données POST pour le traitement de la connexion
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email']) && isset($_POST['password'])) {
             $this->login();
@@ -121,6 +128,39 @@ class UserController
         
         // Redirection vers la page d'accueil après authentification réussie
         $this->router->getRoute('/home');
+        exit;
+    }
+
+    /**
+     * Déconnecte l'utilisateur en détruisant la session et redirige vers la page de connexion.
+     * 
+     * Supprime toutes les données de session de l'utilisateur, détruit la session
+     * complètement, et redirige vers la page de connexion avec un message de confirmation.
+     *
+     * @return void
+     */
+    public function logout(): void
+    {
+        // Suppression de toutes les variables de session
+        $_SESSION = array();
+        
+        // Destruction du cookie de session si il existe
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+        
+        // Destruction de la session
+        session_destroy();
+        
+        // Message de confirmation de déconnexion
+        $this->statusMessageService->setMessage('Déconnexion réussie', 'success');
+        
+        // Redirection vers la page de connexion
+        $this->router->getRoute('/login');
         exit;
     }
 

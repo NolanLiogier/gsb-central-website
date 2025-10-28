@@ -135,8 +135,8 @@ class BaseTemplate
                             {$stockMenuItem}
                         </ul>
                         
-                        <!-- Zone recherche desktop -->
-                        <div class="hidden lg:flex items-center">
+                        <!-- Zone recherche et logout desktop -->
+                        <div class="hidden lg:flex items-center space-x-6">
                             <div class="relative group">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-search text-gray-400 group-hover:text-gray-600 transition-colors"></i>
@@ -146,6 +146,14 @@ class BaseTemplate
                                     placeholder="Rechercher..." 
                                     class="w-64 pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200 hover:bg-white hover:border-gray-300">
                             </div>
+                            
+                            <!-- Bouton de déconnexion -->
+                            <a href="/logout" 
+                               class="flex items-center px-4 py-2.5 text-sm text-red-600 bg-red-50 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors duration-200 border border-red-200"
+                               title="Se déconnecter">
+                                <i class="fas fa-sign-out-alt mr-2"></i>
+                                Déconnexion
+                            </a>
                         </div>
                     </div>
                     
@@ -190,6 +198,13 @@ class BaseTemplate
                             {$companiesMobileItem}
                             {$ordersMobileItem}
                             {$stockMobileItem}
+                            <li class="border-t border-gray-200 pt-3 mt-3">
+                                <a href="/logout" 
+                                   class="flex items-center text-gray-600 hover:text-red-600 transition-colors py-2">
+                                    <i class="fas fa-sign-out-alt mr-2"></i>
+                                    Déconnexion
+                                </a>
+                            </li>
                         </ul>
                     </div>
                 </nav>

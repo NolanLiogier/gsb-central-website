@@ -62,14 +62,14 @@ class UserController
      * 
      * Route les requêtes : affiche le formulaire de connexion pour les requêtes GET,
      * traite le formulaire soumis pour les requêtes POST avec email et password,
-     * ou gère la déconnexion pour la route /logout.
+     * ou gère la déconnexion pour la route /Logout.
      *
      * @return void
      */
     public function index(): void
     {
         // Gestion de la déconnexion
-        if ($_SERVER['REQUEST_URI'] === '/logout') {
+        if ($_SERVER['REQUEST_URI'] === '/Logout') {
             $this->logout();
             exit;
         }
@@ -105,14 +105,14 @@ class UserController
         $user = $this->userRepository->getUserByEmail($email);
         if (empty($user)) {
             $this->statusMessageService->setMessage('Utilisateur inconnu', 'error');
-            $this->router->getRoute('/login');
+            $this->router->getRoute('/Login');
             exit;
         }
 
         // Vérification du mot de passe hashé avec password_verify (sécurité contre timing attacks)
         if (!password_verify($password, $user['password'])) {
             $this->statusMessageService->setMessage('Mot de passe incorrect', 'error');
-            $this->router->getRoute('/login');
+            $this->router->getRoute('/Login');
             exit;
         }
 
@@ -127,7 +127,7 @@ class UserController
         $_SESSION['user_lastname'] = $user['lastname'];
         
         // Redirection vers la page d'accueil après authentification réussie
-        $this->router->getRoute('/home');
+        $this->router->getRoute('/Home');
         exit;
     }
 
@@ -157,7 +157,7 @@ class UserController
         session_destroy();
         
         // Redirection vers la page de connexion
-        $this->router->getRoute('/login');
+        $this->router->getRoute('/Login');
         exit;
     }
 

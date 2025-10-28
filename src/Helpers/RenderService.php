@@ -59,7 +59,9 @@ class RenderService
             $content = $this->getTemplateContent($templateName, $datas);
             
             // Rendu final : encapsulation dans le template de base avec titre et route
-            echo $this->baseTemplate->render( $templateTitle,  $content,  '/' . $templateName);
+            // Les templates sont nommés de façon cohérente avec leurs routes URL
+            $route = '/' . $templateName;
+            echo $this->baseTemplate->render($templateTitle, $content, $route);
             exit();
 
         } catch (\Exception $e) {
@@ -140,7 +142,7 @@ class RenderService
             <body>
                 <h1>Erreur de rendu</h1>
                 <p>Une erreur s'est produite lors du rendu de la page : " . htmlspecialchars($errorMessage) . "</p>
-                <p><a href='/login'>Retour à la connexion</a></p>
+                <p><a href='/Login'>Retour à la connexion</a></p>
             </body>
             </html>";
         exit();

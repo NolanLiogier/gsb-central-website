@@ -26,7 +26,7 @@ class CompaniesTemplate {
         <!-- Titre de la page et bouton d'ajout -->
         <div class="mb-8 flex justify-between items-center">
             <h1 class="text-4xl font-bold text-gray-800">Entreprises</h1>
-            <form action="/modify-company" method="POST" class="inline-block">
+            <form action="/ModifyCompany" method="POST" class="inline-block">
                 <input type="hidden" name="newCompany" value="true">
                 <input type="hidden" name="renderAddCompany" value="true">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
@@ -121,7 +121,7 @@ class CompaniesTemplate {
 
         <!-- Formulaire caché pour soumettre l'ID de l'entreprise lors du clic sur une ligne -->
         <!-- Permet de naviguer vers la page de modification sans formulaire visible -->
-        <form action="/modify-company" method="POST" id="company-form">
+        <form action="/ModifyCompany" method="POST" id="company-form">
             <input type="hidden" name="companyId" id="companyId" value="0" required>
             <input type="hidden" name="renderModifyCompany" id="renderModifyCompany" value="true" required>
         </form>

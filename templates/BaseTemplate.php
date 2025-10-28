@@ -17,10 +17,10 @@ class BaseTemplate
      * 
      * Compare la route du lien avec la route actuelle pour appliquer les bonnes
      * classes CSS. Gère également les cas spéciaux (route racine = home) et
-     * les relations parent/enfant (ex: /modify-company = enfant de /companies).
+     * les relations parent/enfant (ex: /ModifyCompany = enfant de /Companies).
      * Utilisé pour mettre en évidence le lien de la page courante dans la navigation.
      * 
-     * @param string $linkRoute Route du lien à vérifier (ex: '/home', '/companies').
+     * @param string $linkRoute Route du lien à vérifier (ex: '/Home', '/Companies').
      * @param string $currentRoute Route actuelle de la page.
      * @return string Classes CSS pour l'état actif (bleu) ou normal (gris).
      */
@@ -97,7 +97,7 @@ class BaseTemplate
         // Permet de mettre en évidence visuellement la page courante
         $homeNavClasses = $this->getNavLinkClasses(['/Home'], $currentRoute);
         $companiesNavClasses = $this->getNavLinkClasses(['/Companies', '/ModifyCompany'], $currentRoute);
-        $ordersNavClasses = $this->getNavLinkClasses(['/Orders'], $currentRoute);
+        $ordersNavClasses = $this->getNavLinkClasses(['/Commands', '/ModifyCommand'], $currentRoute);
         $stockNavClasses = $this->getNavLinkClasses(['/Stock'], $currentRoute);
 
         // Détermine quels éléments de menu afficher selon le rôle de l'utilisateur
@@ -106,14 +106,14 @@ class BaseTemplate
         $showStock = $this->shouldShowMenuItem('stock');
 
         // Génération des éléments de menu desktop selon les permissions
-        $companiesMenuItem = $showCompanies ? "<li><a href=\"/companies\" class=\"{$companiesNavClasses} transition-colors\">Entreprises</a></li>" : "";
-        $ordersMenuItem = $showOrders ? "<li><a href=\"#\" class=\"{$ordersNavClasses} transition-colors\">Commandes</a></li>" : "";
-        $stockMenuItem = $showStock ? "<li><a href=\"/stock\" class=\"{$stockNavClasses} transition-colors\">Stock</a></li>" : "";
+        $companiesMenuItem = $showCompanies ? "<li><a href=\"/Companies\" class=\"{$companiesNavClasses} transition-colors\">Entreprises</a></li>" : "";
+        $ordersMenuItem = $showOrders ? "<li><a href=\"/Commands\" class=\"{$ordersNavClasses} transition-colors\">Commandes</a></li>" : "";
+        $stockMenuItem = $showStock ? "<li><a href=\"/Stock\" class=\"{$stockNavClasses} transition-colors\">Stock</a></li>" : "";
 
         // Génération des éléments de menu mobile selon les permissions
-        $companiesMobileItem = $showCompanies ? "<li><a href=\"/companies\" class=\"{$companiesNavClasses} transition-colors block py-2\">Entreprises</a></li>" : "";
-        $ordersMobileItem = $showOrders ? "<li><a href=\"#\" class=\"{$ordersNavClasses} transition-colors block py-2\">Commandes</a></li>" : "";
-        $stockMobileItem = $showStock ? "<li><a href=\"/stock\" class=\"{$stockNavClasses} transition-colors block py-2\">Stock</a></li>" : "";
+        $companiesMobileItem = $showCompanies ? "<li><a href=\"/Companies\" class=\"{$companiesNavClasses} transition-colors block py-2\">Entreprises</a></li>" : "";
+        $ordersMobileItem = $showOrders ? "<li><a href=\"/Commands\" class=\"{$ordersNavClasses} transition-colors block py-2\">Commandes</a></li>" : "";
+        $stockMobileItem = $showStock ? "<li><a href=\"/Stock\" class=\"{$stockNavClasses} transition-colors block py-2\">Stock</a></li>" : "";
 
         return <<<HTML
             <header class="bg-white shadow-sm">
@@ -121,7 +121,7 @@ class BaseTemplate
                     <!-- Header principal pour desktop -->
                     <div class="hidden lg:flex justify-between items-center">
                         <div class="flex items-center">
-                            <a href="/home" class="flex items-center text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                            <a href="/Home" class="flex items-center text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
                                 <img src="/public/assets/img/gsb-logo-no-name.png" alt="GSB Logo" class="h-8 w-auto mr-3">
                                 GSB Central
                             </a>
@@ -129,7 +129,7 @@ class BaseTemplate
                         
                         <!-- Navigation desktop -->
                         <ul class="hidden lg:flex space-x-6">
-                            <li><a href="/home" class="{$homeNavClasses} transition-colors">Tableau de bord</a></li>
+                            <li><a href="/Home" class="{$homeNavClasses} transition-colors">Tableau de bord</a></li>
                             {$companiesMenuItem}
                             {$ordersMenuItem}
                             {$stockMenuItem}
@@ -148,7 +148,7 @@ class BaseTemplate
                             </div>
                             
                             <!-- Bouton de déconnexion -->
-                            <a href="/logout" 
+                            <a href="/Logout" 
                                class="flex items-center px-4 py-2.5 text-sm text-red-600 bg-red-50 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors duration-200 border border-red-200"
                                title="Se déconnecter">
                                 <i class="fas fa-sign-out-alt mr-2"></i>
@@ -166,7 +166,7 @@ class BaseTemplate
                         
                         <!-- Titre au centre -->
                         <div class="flex-1 flex justify-center">
-                            <a href="/home" class="flex items-center text-lg font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                            <a href="/Home" class="flex items-center text-lg font-bold text-gray-800 hover:text-blue-600 transition-colors">
                                 <img src="/public/assets/img/gsb-logo-no-name.png" alt="GSB Logo" class="h-8 w-auto mr-2">
                                 GSB Central
                             </a>
@@ -194,12 +194,12 @@ class BaseTemplate
                     <!-- Menu mobile -->
                     <div id="mobileMenu" class="hidden lg:hidden mt-4 pb-4 border-t border-gray-200">
                         <ul class="flex flex-col space-y-3 pt-4">
-                            <li><a href="/home" class="{$homeNavClasses} transition-colors block py-2">Tableau de bord</a></li>
+                            <li><a href="/Home" class="{$homeNavClasses} transition-colors block py-2">Tableau de bord</a></li>
                             {$companiesMobileItem}
                             {$ordersMobileItem}
                             {$stockMobileItem}
                             <li class="border-t border-gray-200 pt-3 mt-3">
-                                <a href="/logout" 
+                                <a href="/Logout" 
                                    class="flex items-center text-gray-600 hover:text-red-600 transition-colors py-2">
                                     <i class="fas fa-sign-out-alt mr-2"></i>
                                     Déconnexion

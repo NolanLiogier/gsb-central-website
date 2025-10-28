@@ -26,7 +26,7 @@ class StockTemplate {
         <!-- Titre de la page et bouton d'ajout -->
         <div class="mb-8 flex justify-between items-center">
             <h1 class="text-4xl font-bold text-gray-800">Stock</h1>
-            <form action="/modify-stock" method="POST" class="inline-block">
+            <form action="/ModifyStock" method="POST" class="inline-block">
                 <input type="hidden" name="newProduct" value="true">
                 <input type="hidden" name="renderAddProduct" value="true">
                 <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
@@ -137,7 +137,7 @@ class StockTemplate {
 
         <!-- Formulaire caché pour soumettre l'ID du produit lors du clic sur une ligne -->
         <!-- Permet de naviguer vers la page de modification sans formulaire visible -->
-        <form action="/modify-stock" method="POST" id="product-form">
+        <form action="/ModifyStock" method="POST" id="product-form">
             <input type="hidden" name="productId" id="productId" value="0" required>
             <input type="hidden" name="renderModifyProduct" id="renderModifyProduct" value="true" required>
         </form>

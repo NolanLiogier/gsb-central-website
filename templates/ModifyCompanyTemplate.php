@@ -68,7 +68,7 @@ class ModifyCompanyTemplate {
         // Ajout du bouton supprimer en mode modification uniquement à droite (pas pour les clients)
         if ($isEditMode && !$isClient) {
             $modifyCompanyContent .= <<<HTML
-                        <form method="POST" action="/modify-company" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette entreprise ?');" class="inline-block">
+                        <form method="POST" action="/ModifyCompany" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette entreprise ?');" class="inline-block">
                             <input type="hidden" name="companyId" value="{$companyIdValue}">
                             <input type="hidden" name="deleteCompany" value="true">
                             <button 
@@ -89,7 +89,7 @@ class ModifyCompanyTemplate {
                 </div>
             </div>
             
-            <form class="p-8" method="POST" action="/modify-company">
+            <form class="p-8" method="POST" action="/ModifyCompany">
                 <!-- Champ caché pour détecter le mode (modification ou création) -->
         HTML;
 
@@ -215,7 +215,7 @@ class ModifyCompanyTemplate {
         // Affichage du bouton Retour uniquement si ce n'est pas un client
         $returnButtonHtml = '';
         if (!$isClient) {
-            $returnButtonHtml = '<a href="/companies" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>';
+            $returnButtonHtml = '<a href="/Companies" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>';
         }
 
         $modifyCompanyContent .= $returnButtonHtml;

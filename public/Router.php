@@ -6,6 +6,7 @@ use App\Controllers\UserController;
 use App\Controllers\HomeController;
 use App\Controllers\CompaniesController;
 use App\Controllers\StockController;
+use App\Controllers\CommandController;
 use App\Controllers\NotFoundController;
 use Dotenv\Dotenv;
 
@@ -49,7 +50,7 @@ class Router {
     private function hasAccessToRoute(string $route): bool
     {
         // Routes accessibles à tous sans authentification
-        if (in_array($route, ['/', '/login', '/logout'])) {
+        if (in_array($route, ['/', '/Login', '/Logout'])) {
             return true;
         }
 
@@ -62,12 +63,12 @@ class Router {
 
         // Commercial ou Client : accès aux entreprises et commandes
         if ($userFunctionId == 1 || $userFunctionId == 2) {
-            return in_array($route, ['/home', '/companies', '/modify-company', '/orders']);
+            return in_array($route, ['/Home', '/Companies', '/ModifyCompany', '/Commands', '/ModifyCommand']);
         }
 
         // Logisticien : accès aux commandes et stock
         if ($userFunctionId == 3) {
-            return in_array($route, ['/home', '/orders', '/stock', '/modify-stock']);
+            return in_array($route, ['/Home', '/Commands', '/ModifyCommand', '/Stock', '/ModifyStock']);
         }
 
         // Par défaut, refuser l'accès
@@ -83,7 +84,7 @@ class Router {
      * le contrôleur approprié selon le chemin demandé. Les routes non définies sont traitées
      * par NotFoundController.
      *
-     * @param string|null $route La route à traiter (par exemple, '/', '/login'). Si null, utilise $_SERVER['REQUEST_URI'].
+     * @param string|null $route La route à traiter (par exemple, '/', '/Login'). Si null, utilise $_SERVER['REQUEST_URI'].
      * @return void
      */
     public function getRoute(?string $route = null): void {
@@ -113,26 +114,27 @@ class Router {
         if (!$this->hasAccessToRoute($route)) {
             // Si l'utilisateur n'est pas connecté, redirige vers le login
             if (!isset($_SESSION['user_email'])) {
-                header('Location: ' . $this->baseUrl . '/login');
+                header('Location: ' . $this->baseUrl . '/Login');
                 exit;
             }
             // Si l'utilisateur n'a pas les permissions, redirige vers le home
-            header('Location: ' . $this->baseUrl . '/home');
+            header('Location: ' . $this->baseUrl . '/Home');
             exit;
         }
 
         // Table de routage : associe chaque chemin à son contrôleur
         $controller = match ($route) {
             '/' => new UserController(),
-            '/login' => new UserController(),
-            '/logout' => new UserController(),
-            '/home' => new HomeController(),
-            '/companies' => new CompaniesController(),
-            '/modify-company' => new CompaniesController(),
-            '/stock' => new StockController(),
-            '/modify-stock' => new StockController(),
-            '/not-found' => new NotFoundController(),
-            //'/orders' => new OrdersController(),
+            '/Login' => new UserController(),
+            '/Logout' => new UserController(),
+            '/Home' => new HomeController(),
+            '/Companies' => new CompaniesController(),
+            '/ModifyCompany' => new CompaniesController(),
+            '/Stock' => new StockController(),
+            '/ModifyStock' => new StockController(),
+            '/Commands' => new CommandController(),
+            '/ModifyCommand' => new CommandController(),
+            '/NotFound' => new NotFoundController(),
             default => new NotFoundController(),
         };
 

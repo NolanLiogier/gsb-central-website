@@ -56,7 +56,7 @@ class ModifyStockTemplate {
         // Ajout du bouton supprimer en mode modification uniquement
         if ($isEditMode) {
             $modifyStockContent .= <<<HTML
-                        <form method="POST" action="/modify-stock" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');" class="inline-block">
+                        <form method="POST" action="/ModifyStock" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');" class="inline-block">
                             <input type="hidden" name="productId" value="{$productIdValue}">
                             <input type="hidden" name="deleteProduct" value="true">
                             <button 
@@ -77,7 +77,7 @@ class ModifyStockTemplate {
                 </div>
             </div>
             
-            <form class="p-8" method="POST" action="/modify-stock">
+            <form class="p-8" method="POST" action="/ModifyStock">
                 <!-- Champ caché pour détecter le mode (modification ou création) -->
         HTML;
 
@@ -146,7 +146,7 @@ class ModifyStockTemplate {
 
                 <!-- Boutons d'action -->
                 <div class="flex justify-end space-x-4 pt-8 mt-8 border-t border-gray-200">
-                    <a href="/stock" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>
+                    <a href="/Stock" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>
                     <button 
                         type="submit" 
                         class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm">

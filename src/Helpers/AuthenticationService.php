@@ -44,7 +44,7 @@ class AuthenticationService
     {
         // Si l'utilisateur n'est pas connecté, redirection immédiate vers la page de connexion
         if (!$this->isUserLoggedIn()) {
-            $this->router->getRoute('/login');
+            $this->router->getRoute('/Login');
             exit;
         }
     }

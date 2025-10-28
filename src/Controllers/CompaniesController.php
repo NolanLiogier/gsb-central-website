@@ -92,7 +92,7 @@ class CompaniesController {
         $userEmail = $_SESSION['user_email'] ?? '';
         
         if (empty($userEmail)) {
-            $this->router->getRoute('/login');
+            $this->router->getRoute('/Login');
             exit;
         }
         
@@ -170,7 +170,7 @@ class CompaniesController {
 
         if (empty($datas)) {
             $this->statusMessageService->setMessage('Aucune entreprise trouvée.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         }
 
@@ -196,7 +196,7 @@ class CompaniesController {
         // Vérification des permissions avec le service de vérification
         if (!$this->permissionVerificationService->canAccessCompany($user, ['companyId' => $companyId])) {
             $this->statusMessageService->setMessage('Accès non autorisé à cette entreprise.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         }
 
@@ -206,7 +206,7 @@ class CompaniesController {
         // Vérification que l'entreprise existe
         if (empty($datas)) {
             $this->statusMessageService->setMessage('Entreprise introuvable.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         }
         
@@ -270,13 +270,13 @@ class CompaniesController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$createStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la création de l\'entreprise.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des entreprises
         $this->statusMessageService->setMessage('L\'entreprise a été créée avec succès.', 'success');
-        $this->router->getRoute('/companies');
+        $this->router->getRoute('/Companies');
         exit;
     }
 
@@ -310,7 +310,7 @@ class CompaniesController {
         // Vérification des permissions avec le service de vérification
         if (!$this->permissionVerificationService->canAccessCompany($user, ['companyId' => $companyId])) {
             $this->statusMessageService->setMessage('Vous n\'êtes pas autorisé à modifier cette entreprise.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         }
 
@@ -326,7 +326,7 @@ class CompaniesController {
 
         // Succès : message de confirmation et redirection vers la liste des entreprises
         $this->statusMessageService->setMessage('Les informations de l\'entreprise ont été mises à jour avec succès.', 'success');
-        $this->router->getRoute('/companies');
+        $this->router->getRoute('/Companies');
         exit;
     }
 
@@ -347,7 +347,7 @@ class CompaniesController {
         // Vérification des permissions avec le service de vérification
         if (!$this->permissionVerificationService->canDeleteCompany($user, ['companyId' => $companyId])) {
             $this->statusMessageService->setMessage('Vous n\'êtes pas autorisé à supprimer cette entreprise.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         }
 
@@ -357,13 +357,13 @@ class CompaniesController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$deleteStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la suppression de l\'entreprise.', 'error');
-            $this->router->getRoute('/companies');
+            $this->router->getRoute('/Companies');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des entreprises
         $this->statusMessageService->setMessage('L\'entreprise a été supprimée avec succès.', 'success');
-        $this->router->getRoute('/companies');
+        $this->router->getRoute('/Companies');
         exit;
     }
 }

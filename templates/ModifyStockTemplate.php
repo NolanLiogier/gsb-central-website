@@ -40,7 +40,7 @@ class ModifyStockTemplate {
         $modifyStockContent = <<<HTML
         <!-- En-tête de la page -->
         <div class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">{$pageTitle}</h1>
+            <h1 class="text-4xl font-bold text-gray-800">{$pageTitle}</h1>
         </div>
 
         <!-- Formulaire de modification de produit -->
@@ -49,7 +49,7 @@ class ModifyStockTemplate {
             <div class="bg-white px-8 py-6 border-b border-gray-100">
                 <div class="flex items-center justify-between">
                     <div>
-                        <h2 class="text-xl font-semibold text-gray-800">Informations du produit</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800">Informations du produit</h2>
                     </div>
         HTML;
 
@@ -61,7 +61,7 @@ class ModifyStockTemplate {
                             <input type="hidden" name="deleteProduct" value="true">
                             <button 
                                 type="submit" 
-                                class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 border border-red-700 rounded-lg hover:bg-red-700 transition-colors duration-200">
+                                class="inline-flex items-center px-4 py-2.5 text-sm font-medium text-white bg-red-600 border border-red-700 rounded-lg hover:bg-red-700 transition-colors duration-200">
                                 <i class="fas fa-trash mr-2"></i>
                                 Supprimer
                             </button>
@@ -149,7 +149,7 @@ class ModifyStockTemplate {
                     <a href="/Stock" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>
                     <button 
                         type="submit" 
-                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-sm">
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-lg">
                         {$buttonText}
                     </button>
                 </div>

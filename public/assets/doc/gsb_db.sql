@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Hôte : db:3306
--- Généré le : mar. 28 oct. 2025 à 08:57
+-- Généré le : mar. 28 oct. 2025 à 17:34
 -- Version du serveur : 10.5.29-MariaDB-ubu2004
 -- Version de PHP : 8.3.26
 
@@ -35,6 +35,15 @@ CREATE TABLE `commands` (
   `fk_user_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Déchargement des données de la table `commands`
+--
+
+INSERT INTO `commands` (`command_id`, `delivery_date`, `created_at`, `fk_status_id`, `fk_user_id`) VALUES
+(5, '2025-10-29 12:00:00', '2025-10-28 15:23:53', 3, 1),
+(6, '2025-10-29 12:00:00', '2025-10-28 15:24:35', 2, 1),
+(7, '2025-11-01 12:00:00', '2025-10-28 15:36:41', 2, 1);
+
 -- --------------------------------------------------------
 
 --
@@ -47,6 +56,16 @@ CREATE TABLE `command_details` (
   `fk_product_id` int(11) NOT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `command_details`
+--
+
+INSERT INTO `command_details` (`details_id`, `fk_command_id`, `fk_product_id`, `created_at`) VALUES
+(43, 5, 2, '2025-10-28 15:23:57'),
+(44, 5, 2, '2025-10-28 15:23:57'),
+(47, 6, 2, '2025-10-28 15:26:46'),
+(48, 7, 2, '2025-10-28 15:26:46');
 
 -- --------------------------------------------------------
 
@@ -69,7 +88,7 @@ CREATE TABLE `companies` (
 
 INSERT INTO `companies` (`company_id`, `company_name`, `fk_sector_id`, `fk_salesman_id`, `siren`, `siret`) VALUES
 (1, 'gsb', 3, 2, '899851981', '45651891891918'),
-(2, 'hopital nord', 1, 2, '981981981', '45641978198198');
+(2, 'hopital nord test', 1, 2, '981981981', '45641978198198');
 
 -- --------------------------------------------------------
 
@@ -121,6 +140,15 @@ CREATE TABLE `status` (
   `status_id` int(11) NOT NULL,
   `status_name` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Déchargement des données de la table `status`
+--
+
+INSERT INTO `status` (`status_id`, `status_name`) VALUES
+(1, 'validé'),
+(2, 'envoyé'),
+(3, 'en attente');
 
 -- --------------------------------------------------------
 
@@ -176,7 +204,8 @@ INSERT INTO `users` (`user_id`, `firstname`, `lastname`, `email`, `password`, `f
 --
 ALTER TABLE `commands`
   ADD PRIMARY KEY (`command_id`),
-  ADD KEY `idx_status` (`fk_status_id`);
+  ADD KEY `idx_status` (`fk_status_id`),
+  ADD KEY `fk_commands_user` (`fk_user_id`);
 
 --
 -- Index pour la table `command_details`
@@ -234,13 +263,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT pour la table `commands`
 --
 ALTER TABLE `commands`
-  MODIFY `command_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `command_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT pour la table `command_details`
 --
 ALTER TABLE `command_details`
-  MODIFY `details_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `details_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT pour la table `companies`
@@ -264,7 +293,7 @@ ALTER TABLE `sectors`
 -- AUTO_INCREMENT pour la table `status`
 --
 ALTER TABLE `status`
-  MODIFY `status_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `status_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT pour la table `stock`
@@ -286,7 +315,8 @@ ALTER TABLE `users`
 -- Contraintes pour la table `commands`
 --
 ALTER TABLE `commands`
-  ADD CONSTRAINT `fk_commands_status` FOREIGN KEY (`fk_status_id`) REFERENCES `status` (`status_id`) ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_commands_status` FOREIGN KEY (`fk_status_id`) REFERENCES `status` (`status_id`) ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_commands_user` FOREIGN KEY (`fk_user_id`) REFERENCES `users` (`user_id`);
 
 --
 -- Contraintes pour la table `command_details`

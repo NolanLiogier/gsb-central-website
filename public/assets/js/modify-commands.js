@@ -22,9 +22,25 @@ function decreaseQuantity(productId) {
     }
 }
 
+// Variable globale pour stocker les données des produits
+let products = {};
+
+// Initialiser les données des produits
+function initProductsData() {
+    const productsDataElement = document.getElementById('products-data');
+    if (productsDataElement) {
+        try {
+            products = JSON.parse(productsDataElement.textContent);
+        } catch (error) {
+            console.error('Erreur lors du parsing des données produits:', error);
+            products = {};
+        }
+    }
+}
+
 // Mettre à jour le récapitulatif de la commande
 function updateOrderSummary() {
-    if (typeof products === 'undefined') return;
+    if (typeof products === 'undefined' || Object.keys(products).length === 0) return;
     
     let subtotal = 0;
     let summaryHTML = '';
@@ -67,5 +83,9 @@ function updateOrderSummary() {
 
 // Initialisation au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser les données des produits
+    initProductsData();
+    
+    // Mettre à jour le récapitulatif
     updateOrderSummary();
 });

@@ -76,11 +76,11 @@ class BaseTemplate
     }
 
     /**
-     * Génère le header HTML avec navigation responsive et barre de recherche.
+     * Génère le header HTML avec navigation responsive.
      * 
      * Crée l'en-tête de navigation avec deux versions : desktop (visible sur écrans larges)
      * et mobile (menu hamburger). Détermine les classes CSS actives pour les liens de
-     * navigation. Inclut le logo GSB Central, les liens de navigation, et la barre de recherche.
+     * navigation. Inclut le logo GSB Central et les liens de navigation.
      * Masque les éléments de menu selon les permissions de l'utilisateur.
      * 
      * @param string $currentRoute Route actuelle pour déterminer l'état actif des liens.
@@ -135,18 +135,8 @@ class BaseTemplate
                             {$stockMenuItem}
                         </ul>
                         
-                        <!-- Zone recherche et logout desktop -->
-                        <div class="hidden lg:flex items-center space-x-6">
-                            <div class="relative group">
-                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <i class="fas fa-search text-gray-400 group-hover:text-gray-600 transition-colors"></i>
-                                </div>
-                                <input 
-                                    type="search" 
-                                    placeholder="Rechercher..." 
-                                    class="w-64 pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200 hover:bg-white hover:border-gray-300">
-                            </div>
-                            
+                        <!-- Zone logout desktop -->
+                        <div class="hidden lg:flex items-center">
                             <!-- Bouton de déconnexion -->
                             <a href="/Logout" 
                                class="flex items-center px-4 py-2.5 text-sm text-red-600 bg-red-50 hover:text-red-700 hover:bg-red-100 rounded-lg transition-colors duration-200 border border-red-200"
@@ -170,24 +160,6 @@ class BaseTemplate
                                 <img src="/public/assets/img/gsb-logo-no-name.png" alt="GSB Logo" class="h-8 w-auto mr-2">
                                 GSB Central
                             </a>
-                        </div>
-                        
-                        <!-- Icône recherche à droite -->
-                        <button class="p-2 rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors" onclick="toggleMobileSearch()">
-                            <i class="fas fa-search text-xl"></i>
-                        </button>
-                    </div>
-                    
-                    <!-- Barre de recherche mobile -->
-                    <div id="mobileSearch" class="hidden lg:hidden mt-4">
-                        <div class="relative">
-                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <i class="fas fa-search text-gray-400"></i>
-                            </div>
-                            <input 
-                                type="search" 
-                                placeholder="Rechercher..." 
-                                class="w-full pl-10 pr-4 py-2.5 text-sm text-gray-700 placeholder-gray-500 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition-all duration-200">
                         </div>
                     </div>
                     

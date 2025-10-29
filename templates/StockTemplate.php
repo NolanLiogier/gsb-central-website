@@ -63,71 +63,10 @@ class StockTemplate {
 
         // Vérification si la liste des produits est vide
         if (empty($products)) {
-            // Message à afficher lorsqu'il n'y a aucun produit
-            $stockContent .= <<<HTML
-                    <tr>
-                        <td colspan="4" class="px-6 py-12 text-center">
-                            <div class="text-gray-500">
-                                <i class="fas fa-box text-4xl mb-4"></i>
-                                <p class="text-lg font-medium">Aucun produit en stock</p>
-                                <p class="text-sm mt-2">Commencez par ajouter un produit.</p>
-                            </div>
-                        </td>
-                    </tr>
-                HTML;
-        } 
-        else {
+            $stockContent .= $this->generateEmptyState();
+        } else {
             // Génération dynamique des lignes du tableau pour chaque produit
-            foreach ($products as $product) {
-                // Calcul de la valeur totale pour chaque produit
-                $totalValue = (float)($product['quantity'] ?? 0) * (float)($product['price'] ?? 0);
-                
-                // Échappement XSS de toutes les valeurs pour éviter les injections
-                $productId = htmlspecialchars($product['product_id']);
-                $productName = htmlspecialchars(strtoupper($product['product_name']));
-                $quantity = htmlspecialchars($product['quantity']);
-                $price = number_format((float)($product['price'] ?? 0), 2, ',', ' ') . ' €';
-                $valueTotal = number_format($totalValue, 2, ',', ' ') . ' €';
-                
-                // Classe de couleur selon la quantité en stock
-                $quantityClass = 'text-gray-900';
-                $quantityBadge = '';
-                
-                if ($quantity < 10) {
-                    $quantityClass = 'text-red-600 font-semibold';
-                    $quantityBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">Faible</span>';
-                } 
-                elseif ($quantity < 50) {
-                    $quantityClass = 'text-yellow-600 font-semibold';
-                    $quantityBadge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">Moyen</span>';
-                }
-                
-                $stockContent .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$productId}')">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">
-                                {$productName}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm {$quantityClass}">
-                                {$quantity}
-                                {$quantityBadge}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                {$price}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-semibold text-gray-900">
-                                {$valueTotal}
-                            </div>
-                        </td>
-                    </tr>
-                HTML;
-            }
+            $stockContent .= $this->generateProductRows($products);
         }
 
         $stockContent .= <<<HTML
@@ -154,6 +93,116 @@ class StockTemplate {
         HTML;
 
         return $stockContent;
+    }
+
+    /**
+     * Génère le message d'état vide lorsqu'il n'y a aucun produit.
+     * 
+     * Crée une ligne de tableau avec un message informatif centré.
+     *
+     * @return string HTML de l'état vide généré.
+     */
+    private function generateEmptyState(): string
+    {
+        return <<<HTML
+                    <tr>
+                        <td colspan="4" class="px-6 py-12 text-center">
+                            <div class="text-gray-500">
+                                <i class="fas fa-box text-4xl mb-4"></i>
+                                <p class="text-lg font-medium">Aucun produit en stock</p>
+                                <p class="text-sm mt-2">Commencez par ajouter un produit.</p>
+                            </div>
+                        </td>
+                    </tr>
+HTML;
+    }
+
+    /**
+     * Génère les lignes du tableau pour chaque produit.
+     * 
+     * Crée une ligne de tableau avec les informations du produit :
+     * nom, quantité (avec badge de statut), prix unitaire et valeur totale.
+     *
+     * @param array $products Liste des produits à afficher.
+     * @return string HTML des lignes de produits générées.
+     */
+    private function generateProductRows(array $products): string
+    {
+        $html = '';
+        
+        foreach ($products as $product) {
+            // Calcul de la valeur totale pour chaque produit
+            $totalValue = (float)($product['quantity'] ?? 0) * (float)($product['price'] ?? 0);
+            
+            // Échappement XSS de toutes les valeurs pour éviter les injections
+            $productId = htmlspecialchars($product['product_id']);
+            $productName = htmlspecialchars(strtoupper($product['product_name']));
+            $quantity = htmlspecialchars($product['quantity']);
+            $price = number_format((float)($product['price'] ?? 0), 2, ',', ' ') . ' €';
+            $valueTotal = number_format($totalValue, 2, ',', ' ') . ' €';
+            
+            // Génération des classes et badges selon la quantité en stock
+            $quantityData = $this->formatQuantityDisplay($quantity);
+            
+            $html .= <<<HTML
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$productId}')">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                {$productName}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm {$quantityData['class']}">
+                                {$quantity}
+                                {$quantityData['badge']}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {$price}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-semibold text-gray-900">
+                                {$valueTotal}
+                            </div>
+                        </td>
+                    </tr>
+HTML;
+        }
+        
+        return $html;
+    }
+
+    /**
+     * Génère les classes CSS et badge selon la quantité en stock.
+     * 
+     * Détermine le style et le badge à afficher selon le niveau de stock :
+     * - Faible (< 10) : rouge
+     * - Moyen (< 50) : jaune
+     * - Normal (>= 50) : gris
+     *
+     * @param int|string $quantity Quantité en stock.
+     * @return array Tableau contenant ['class' => string, 'badge' => string].
+     */
+    private function formatQuantityDisplay($quantity): array
+    {
+        $quantityInt = (int)$quantity;
+        $class = 'text-gray-900';
+        $badge = '';
+        
+        if ($quantityInt < 10) {
+            $class = 'text-red-600 font-semibold';
+            $badge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 ml-2">Faible</span>';
+        } elseif ($quantityInt < 50) {
+            $class = 'text-yellow-600 font-semibold';
+            $badge = '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">Moyen</span>';
+        }
+        
+        return [
+            'class' => $class,
+            'badge' => $badge
+        ];
     }
 }
 

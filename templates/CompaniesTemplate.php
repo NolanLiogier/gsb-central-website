@@ -60,58 +60,10 @@ class CompaniesTemplate {
 
         // Vérification si la liste des entreprises est vide
         if (empty($companies)) {
-            // Message à afficher lorsqu'il n'y a aucune entreprise
-            $companiesContent .= <<<HTML
-                    <tr>
-                        <td colspan="3" class="px-6 py-12 text-center">
-                            <div class="text-gray-500">
-                                <i class="fas fa-building text-4xl mb-4"></i>
-                                <p class="text-lg font-medium">Aucune entreprise trouvée</p>
-                                <p class="text-sm mt-2">Vous n'avez aucune entreprise assignée pour le moment.</p>
-                            </div>
-                        </td>
-                    </tr>
-                HTML;
+            $companiesContent .= $this->generateEmptyState();
         } else {
             // Génération dynamique des lignes du tableau pour chaque entreprise
-            foreach ($companies as $company) {
-                // Construction du nom complet du commercial avec gestion du cas "non assigné"
-                // Affiche "Prénom Nom" si les deux sont présents, sinon "Non assigné"
-                $salesmanName = 'Non assigné';
-                if (!empty($company['firstname']) && !empty($company['lastname'])) {
-                    $salesmanName = ucfirst($company['firstname']) . ' ' . ucfirst($company['lastname']);
-                }
-                
-                // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
-                // Facilite la lecture et maintient un style uniforme dans le tableau
-                $companyNameUpper = strtoupper($company['company_name']);
-                
-                // Échappement XSS de toutes les valeurs pour éviter les injections
-                $companyId = htmlspecialchars($company['company_id']);
-                $companyName = htmlspecialchars($companyNameUpper);
-                $sectorName = htmlspecialchars($company['sector_name']);
-                $salesmanName = htmlspecialchars($salesmanName);
-                
-                $companiesContent .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$companyId}')">
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm font-medium text-gray-900">
-                                {$companyName}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                {$sectorName}
-                            </div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">
-                                {$salesmanName}
-                            </div>
-                        </td>
-                    </tr>
-                HTML;
-            }
+            $companiesContent .= $this->generateCompanyRows($companies);
         }
 
         $companiesContent .= <<<HTML
@@ -138,5 +90,94 @@ class CompaniesTemplate {
         HTML;
 
         return $companiesContent;
+    }
+
+    /**
+     * Génère le message d'état vide lorsqu'il n'y a aucune entreprise.
+     * 
+     * Crée une ligne de tableau avec un message informatif centré.
+     *
+     * @return string HTML de l'état vide généré.
+     */
+    private function generateEmptyState(): string
+    {
+        return <<<HTML
+                    <tr>
+                        <td colspan="3" class="px-6 py-12 text-center">
+                            <div class="text-gray-500">
+                                <i class="fas fa-building text-4xl mb-4"></i>
+                                <p class="text-lg font-medium">Aucune entreprise trouvée</p>
+                                <p class="text-sm mt-2">Vous n'avez aucune entreprise assignée pour le moment.</p>
+                            </div>
+                        </td>
+                    </tr>
+HTML;
+    }
+
+    /**
+     * Génère les lignes du tableau pour chaque entreprise.
+     * 
+     * Crée une ligne de tableau avec les informations de l'entreprise :
+     * nom, secteur et commercial assigné. Gère le cas "non assigné" pour le commercial.
+     *
+     * @param array $companies Liste des entreprises à afficher.
+     * @return string HTML des lignes d'entreprises générées.
+     */
+    private function generateCompanyRows(array $companies): string
+    {
+        $html = '';
+        
+        foreach ($companies as $company) {
+            // Construction du nom complet du commercial avec gestion du cas "non assigné"
+            $salesmanName = $this->formatSalesmanName($company);
+            
+            // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
+            $companyNameUpper = strtoupper($company['company_name']);
+            
+            // Échappement XSS de toutes les valeurs pour éviter les injections
+            $companyId = htmlspecialchars($company['company_id']);
+            $companyName = htmlspecialchars($companyNameUpper);
+            $sectorName = htmlspecialchars($company['sector_name']);
+            $salesmanNameEscaped = htmlspecialchars($salesmanName);
+            
+            $html .= <<<HTML
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$companyId}')">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm font-medium text-gray-900">
+                                {$companyName}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {$sectorName}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">
+                                {$salesmanNameEscaped}
+                            </div>
+                        </td>
+                    </tr>
+HTML;
+        }
+        
+        return $html;
+    }
+
+    /**
+     * Formate le nom complet du commercial.
+     * 
+     * Affiche "Prénom Nom" si les deux sont présents, sinon "Non assigné".
+     *
+     * @param array $company Données de l'entreprise avec firstname et lastname.
+     * @return string Nom formaté du commercial.
+     */
+    private function formatSalesmanName(array $company): string
+    {
+        if (!empty($company['firstname']) && !empty($company['lastname'])) {
+            return ucfirst($company['firstname']) . ' ' . ucfirst($company['lastname']);
+        }
+        
+        return 'Non assigné';
     }
 }

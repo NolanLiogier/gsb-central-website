@@ -25,7 +25,7 @@ class HomeTemplate {
         $message = htmlspecialchars($datas['message'] ?? '');
         
         $homeContent = <<<HTML
-            <h1 class="text-3xl font-bold text-gray-800">{$message}</h1>
+            <h1 class="text-4xl font-bold text-gray-800">{$message}</h1>
         HTML;
 
         return $homeContent;

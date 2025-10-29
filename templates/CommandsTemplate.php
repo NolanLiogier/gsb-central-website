@@ -29,19 +29,7 @@ HTML;
         $currentUser = $datas['currentUser'] ?? [];
         $userFunctionId = $currentUser['fk_function_id'] ?? null;
         
-        // Seuls les clients peuvent créer des commandes
-        if ($userFunctionId == 2) {
-            $commandContent .= <<<HTML
-            <form action="/ModifyCommand" method="POST" class="inline-block">
-                <input type="hidden" name="newCommand" value="true">
-                <input type="hidden" name="renderAddCommand" value="true">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
-                    <i class="fas fa-plus text-white"></i>
-                    <span>Créer une commande</span>
-                </button>
-            </form>
-HTML;
-        }
+        $commandContent .= $this->generateCreateButton($userFunctionId);
         
         $commandContent .= <<<HTML
         </div>
@@ -54,21 +42,7 @@ HTML;
 HTML;
 
         // Affichage des colonnes selon le rôle
-        if ($userFunctionId == 1 || $userFunctionId == 3) { // Commercial ou Logisticien
-            $commandContent .= <<<HTML
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            CLIENT
-                        </th>
-HTML;
-        }
-        
-        if ($userFunctionId == 1 || $userFunctionId == 3) { // Commercial ou Logisticien
-            $commandContent .= <<<HTML
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            ENTREPRISE
-                        </th>
-HTML;
-        }
+        $commandContent .= $this->generateTableHeaders($userFunctionId);
         
         $commandContent .= <<<HTML
                         <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
@@ -87,102 +61,18 @@ HTML;
                 <tbody class="bg-white divide-y divide-gray-200">
         HTML;
 
-        // Récupération sécurisée de la liste des commandes (tableau vide si absente)
-        // Les commandes sont maintenant directement dans $datas, pas dans une sous-clé
-        $commands = [];
-        if (is_array($datas)) {
-            // Filtrer les éléments qui sont des commandes (ont un command_id)
-            foreach ($datas as $key => $value) {
-                if (is_array($value) && isset($value['command_id'])) {
-                    $commands[] = $value;
-                }
-            }
-        }
-
+        // Récupération sécurisée de la liste des commandes
+        $commands = $this->extractCommands($datas);
+        
         // Calcul du nombre de colonnes pour le colspan
-        $colspan = 3; // Date livraison, Date création, Statut
-        if ($userFunctionId == 1 || $userFunctionId == 3) {
-            $colspan += 2; // Client, Entreprise
-        }
-        $colspan += 1; // Actions
+        $colspan = $this->calculateColspan($userFunctionId);
         
         // Vérification si la liste des commandes est vide
         if (empty($commands)) {
-            // Message à afficher lorsqu'il n'y a aucune commande
-            $commandContent .= <<<HTML
-                    <tr>
-                        <td colspan="{$colspan}" class="px-6 py-12 text-center">
-                            <div class="text-gray-500">
-                                <i class="fas fa-shopping-cart text-4xl mb-4"></i>
-                                <p class="text-lg font-medium">Aucune commande</p>
-                                <p class="text-sm mt-2">Vous n'avez aucune commande pour le moment.</p>
-                            </div>
-                        </td>
-                    </tr>
-                HTML;
-        } 
-        else {
+            $commandContent .= $this->generateEmptyState($colspan);
+        } else {
             // Génération dynamique des lignes du tableau pour chaque commande
-            foreach ($commands as $command) {
-                // Échappement XSS de toutes les valeurs pour éviter les injections
-                $commandId = htmlspecialchars($command['command_id'] ?? '0');
-                $deliveryDate = isset($command['delivery_date']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['delivery_date']))) : '-';
-                $createdAt = isset($command['created_at']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['created_at']))) : '-';
-                $statusName = htmlspecialchars($command['status_name'] ?? '-');
-                // Récupérer le status_id avec gestion appropriée du type
-                $statusId = isset($command['fk_status_id']) ? (int)$command['fk_status_id'] : null;
-                // En cas d'absence, utiliser status_id depuis la requête si disponible
-                if ($statusId === null && isset($command['status_id'])) {
-                    $statusId = (int)$command['status_id'];
-                }
-                
-                // Informations client et entreprise pour commerciaux et logisticiens
-                $clientName = '';
-                $companyName = '';
-                if ($userFunctionId == 1 || $userFunctionId == 3) {
-                    $clientName = htmlspecialchars(($command['firstname'] ?? '') . ' ' . ($command['lastname'] ?? ''));
-                    $companyName = htmlspecialchars($command['company_name'] ?? '-');
-                }
-                
-                // Génération des actions selon le rôle et le statut
-                // Vérifier que statusId n'est pas null avant de caster
-                $actionsHtml = '';
-                if ($statusId !== null) {
-                    $actionsHtml = $this->generateActionButtons((int)$commandId, (int)$statusId, (int)$userFunctionId);
-                }
-                
-                $commandContent .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors">
-HTML;
-                
-                // Colonnes selon le rôle
-                if ($userFunctionId == 1 || $userFunctionId == 3) {
-                    $commandContent .= <<<HTML
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{$clientName}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{$companyName}</div>
-                        </td>
-HTML;
-                }
-                
-                $commandContent .= <<<HTML
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{$deliveryDate}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{$createdAt}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{$statusName}</div>
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap">
-                            {$actionsHtml}
-                        </td>
-                    </tr>
-                HTML;
-            }
+            $commandContent .= $this->generateCommandRows($commands, $userFunctionId);
         }
 
         $commandContent .= <<<HTML
@@ -196,6 +86,51 @@ HTML;
     }
 
     /**
+     * Définit les droits d'un utilisateur selon son rôle et le statut de la commande.
+     * 
+     * @param int $userFunctionId ID de la fonction de l'utilisateur.
+     * @param int $statusId ID du statut de la commande.
+     * @return array Tableau contenant les droits : ['canModify' => bool, 'canDelete' => bool, 'canValidate' => bool]
+     */
+    private function defineUserRights(int $userFunctionId, int $statusId): array {
+        $rights = [
+            'canModify' => false,
+            'canDelete' => false,
+            'canValidate' => false
+        ];
+        
+        switch ($userFunctionId) {
+            case 1: // Commercial
+                // Peut modifier et supprimer les commandes en attente (3) et validées (1)
+                // Ne peut pas modifier/supprimer les commandes envoyées (2)
+                if ($statusId == 3 || $statusId == 1) {
+                    $rights['canModify'] = true;
+                    $rights['canDelete'] = true;
+                }
+                // Peut valider uniquement les commandes en attente (3)
+                if ($statusId == 3) {
+                    $rights['canValidate'] = true;
+                }
+                break;
+                
+            case 2: // Client
+                // Peut modifier et supprimer uniquement les commandes en attente (3)
+                if ($statusId == 3) {
+                    $rights['canModify'] = true;
+                    $rights['canDelete'] = true;
+                }
+                break;
+                
+            case 3: // Logisticien
+                // Ne peut que consulter (pas de modification/suppression/validation)
+                // Les droits restent à false
+                break;
+        }
+        
+        return $rights;
+    }
+
+    /**
      * Génère les boutons d'action selon le rôle de l'utilisateur et le statut de la commande.
      * 
      * @param int $commandId ID de la commande.
@@ -206,8 +141,11 @@ HTML;
     private function generateActionButtons(int $commandId, int $statusId, int $userFunctionId): string {
         $buttons = '';
         
-        // Bouton Modifier (tous les rôles selon les règles)
-        if (($userFunctionId == 2 && $statusId == 3) || $userFunctionId == 1) {
+        // Récupération des droits de l'utilisateur
+        $rights = $this->defineUserRights($userFunctionId, $statusId);
+        
+        // Bouton Modifier
+        if ($rights['canModify']) {
             $buttons .= <<<HTML
                 <form action="/ModifyCommand" method="POST" class="inline-block mr-2">
                     <input type="hidden" name="commandId" value="{$commandId}">
@@ -219,8 +157,8 @@ HTML;
 HTML;
         }
         
-        // Bouton Supprimer (tous les rôles selon les règles)
-        if (($userFunctionId == 2 && $statusId == 3) || $userFunctionId == 1) {
+        // Bouton Supprimer
+        if ($rights['canDelete']) {
             $buttons .= <<<HTML
                 <form action="/Commands" method="POST" class="inline-block mr-2" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')">
                     <input type="hidden" name="commandId" value="{$commandId}">
@@ -232,8 +170,8 @@ HTML;
 HTML;
         }
         
-        // Bouton Valider (Commercial uniquement, statut "en attente")
-        if ($userFunctionId == 1 && $statusId == 3) {
+        // Bouton Valider
+        if ($rights['canValidate']) {
             $buttons .= <<<HTML
                 <form action="/Commands" method="POST" class="inline-block mr-2" onsubmit="return confirm('Êtes-vous sûr de vouloir valider cette commande ?')">
                     <input type="hidden" name="commandId" value="{$commandId}">
@@ -242,7 +180,7 @@ HTML;
                         <i class="fas fa-check"></i>
                     </button>
                 </form>
-HTML;
+        HTML;
         }
         
         // Bouton Voir (Logisticien uniquement - consultation uniquement)
@@ -255,6 +193,11 @@ HTML;
                         <i class="fas fa-eye"></i>
                     </button>
                 </form>
+        HTML;
+            // Bouton Envoyer uniquement pour les commandes validées (statut 1)
+            // Les commandes déjà envoyées (statut 2) ou en attente (statut 3) ne peuvent pas être envoyées
+            if ($statusId == 1) {
+                $buttons .= <<<HTML
                 <form action="/Commands" method="POST" class="inline-block mr-2" onsubmit="return confirm('Êtes-vous sûr de vouloir envoyer cette commande ?')">
                     <input type="hidden" name="commandId" value="{$commandId}">
                     <input type="hidden" name="sendCommand" value="true">
@@ -263,9 +206,214 @@ HTML;
                     </button>
                 </form>
         HTML;
+            }
         }
         
         return $buttons ?: '<span class="text-gray-400 text-xs">Aucune action</span>';
+    }
+
+    /**
+     * Génère le bouton de création de commande.
+     * 
+     * Affiche le bouton uniquement pour les clients (role 2).
+     *
+     * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
+     * @return string HTML du bouton de création ou chaîne vide.
+     */
+    private function generateCreateButton(?int $userFunctionId): string
+    {
+        // Seuls les clients peuvent créer des commandes
+        if ($userFunctionId == 2) {
+            return <<<HTML
+            <form action="/ModifyCommand" method="POST" class="inline-block">
+                <input type="hidden" name="newCommand" value="true">
+                <input type="hidden" name="renderAddCommand" value="true">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-plus text-white"></i>
+                    <span>Créer une commande</span>
+                </button>
+            </form>
+HTML;
+        }
+        
+        return '';
+    }
+
+    /**
+     * Génère les en-têtes du tableau selon le rôle de l'utilisateur.
+     * 
+     * Affiche les colonnes Client et Entreprise uniquement pour les commerciaux
+     * et logisticiens (roles 1 et 3).
+     *
+     * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
+     * @return string HTML des en-têtes de colonnes générés.
+     */
+    private function generateTableHeaders(?int $userFunctionId): string
+    {
+        $headers = '';
+        
+        // Commercial ou Logisticien : affichage des colonnes Client et Entreprise
+        if ($userFunctionId == 1 || $userFunctionId == 3) {
+            $headers .= <<<HTML
+                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
+                            CLIENT
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
+                            ENTREPRISE
+                        </th>
+HTML;
+        }
+        
+        return $headers;
+    }
+
+    /**
+     * Extrait les commandes depuis les données.
+     * 
+     * Filtre les éléments qui sont des commandes (ont un command_id)
+     * depuis le tableau de données fourni.
+     *
+     * @param array $datas Données brutes contenant potentiellement des commandes.
+     * @return array Liste des commandes extraites.
+     */
+    private function extractCommands(array $datas): array
+    {
+        $commands = [];
+        
+        if (is_array($datas)) {
+            // Filtrer les éléments qui sont des commandes (ont un command_id)
+            foreach ($datas as $key => $value) {
+                if (is_array($value) && isset($value['command_id'])) {
+                    $commands[] = $value;
+                }
+            }
+        }
+        
+        return $commands;
+    }
+
+    /**
+     * Calcule le nombre de colonnes pour le colspan.
+     * 
+     * Détermine le nombre total de colonnes selon le rôle :
+     * - Base : Date livraison, Date création, Statut, Actions (4 colonnes)
+     * - Commercial/Logisticien : ajoute Client et Entreprise (2 colonnes supplémentaires)
+     *
+     * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
+     * @return int Nombre de colonnes total.
+     */
+    private function calculateColspan(?int $userFunctionId): int
+    {
+        $colspan = 4; // Date livraison, Date création, Statut, Actions
+        
+        if ($userFunctionId == 1 || $userFunctionId == 3) {
+            $colspan += 2; // Client, Entreprise
+        }
+        
+        return $colspan;
+    }
+
+    /**
+     * Génère le message d'état vide lorsqu'il n'y a aucune commande.
+     * 
+     * Crée une ligne de tableau avec un message informatif centré.
+     *
+     * @param int $colspan Nombre de colonnes à fusionner.
+     * @return string HTML de l'état vide généré.
+     */
+    private function generateEmptyState(int $colspan): string
+    {
+        $colspanEscaped = htmlspecialchars($colspan);
+        
+        return <<<HTML
+                    <tr>
+                        <td colspan="{$colspanEscaped}" class="px-6 py-12 text-center">
+                            <div class="text-gray-500">
+                                <i class="fas fa-shopping-cart text-4xl mb-4"></i>
+                                <p class="text-lg font-medium">Aucune commande</p>
+                                <p class="text-sm mt-2">Vous n'avez aucune commande pour le moment.</p>
+                            </div>
+                        </td>
+                    </tr>
+HTML;
+    }
+
+    /**
+     * Génère les lignes du tableau pour chaque commande.
+     * 
+     * Crée une ligne de tableau avec toutes les informations de la commande :
+     * client, entreprise (si applicable), dates, statut et actions.
+     *
+     * @param array $commands Liste des commandes à afficher.
+     * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
+     * @return string HTML des lignes de commandes générées.
+     */
+    private function generateCommandRows(array $commands, ?int $userFunctionId): string
+    {
+        $html = '';
+        
+        foreach ($commands as $command) {
+            // Échappement XSS de toutes les valeurs pour éviter les injections
+            $commandId = htmlspecialchars($command['command_id'] ?? '0');
+            $deliveryDate = isset($command['delivery_date']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['delivery_date']))) : '-';
+            $createdAt = isset($command['created_at']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['created_at']))) : '-';
+            $statusName = htmlspecialchars($command['status_name'] ?? '-');
+            
+            // Récupérer le status_id avec gestion appropriée du type
+            $statusId = isset($command['fk_status_id']) ? (int)$command['fk_status_id'] : null;
+            // En cas d'absence, utiliser status_id depuis la requête si disponible
+            if ($statusId === null && isset($command['status_id'])) {
+                $statusId = (int)$command['status_id'];
+            }
+            
+            // Informations client et entreprise pour commerciaux et logisticiens
+            $clientName = '';
+            $companyName = '';
+            if ($userFunctionId == 1 || $userFunctionId == 3) {
+                $clientName = htmlspecialchars(($command['firstname'] ?? '') . ' ' . ($command['lastname'] ?? ''));
+                $companyName = htmlspecialchars($command['company_name'] ?? '-');
+            }
+            
+            // Génération des actions selon le rôle et le statut
+            $actionsHtml = '';
+            if ($statusId !== null) {
+                $actionsHtml = $this->generateActionButtons((int)$commandId, (int)$statusId, (int)$userFunctionId);
+            }
+            
+            $html .= <<<HTML
+                    <tr class="hover:bg-gray-50 transition-colors">
+HTML;
+            
+            // Colonnes selon le rôle
+            if ($userFunctionId == 1 || $userFunctionId == 3) {
+                $html .= <<<HTML
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{$clientName}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{$companyName}</div>
+                        </td>
+HTML;
+            }
+            
+            $html .= <<<HTML
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{$deliveryDate}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{$createdAt}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900">{$statusName}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {$actionsHtml}
+                        </td>
+                    </tr>
+HTML;
+        }
+        
+        return $html;
     }
 }
 

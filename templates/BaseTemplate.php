@@ -2,6 +2,8 @@
 
 namespace Templates;
 
+use App\Helpers\UserService;
+
 /**
  * Template de base pour toutes les pages de l'application GSB Central.
  * 
@@ -13,14 +15,30 @@ namespace Templates;
 class BaseTemplate
 {
     /**
+     * Service utilisateur pour la vérification de l'authentification.
+     * 
+     * @var UserService
+     */
+    private UserService $userService;
+
+    /**
+     * Initialise le template de base en créant l'instance du UserService.
+     * 
+     * @return void
+     */
+    public function __construct()
+    {
+        $this->userService = new UserService();
+    }
+    /**
      * Détermine les classes CSS pour un lien de navigation selon son état actif.
      * 
      * Compare la route du lien avec la route actuelle pour appliquer les bonnes
-     * classes CSS. Gère également les cas spéciaux (route racine = home) et
+     * classes CSS. Gère également les cas spéciaux (route racine = dashboard) et
      * les relations parent/enfant (ex: /ModifyCompany = enfant de /Companies).
      * Utilisé pour mettre en évidence le lien de la page courante dans la navigation.
      * 
-     * @param string $linkRoute Route du lien à vérifier (ex: '/Home', '/Companies').
+     * @param string $linkRoute Route du lien à vérifier (ex: '/Dashboard', '/Companies').
      * @param string $currentRoute Route actuelle de la page.
      * @return string Classes CSS pour l'état actif (bleu) ou normal (gris).
      */
@@ -50,25 +68,25 @@ class BaseTemplate
      */
     private function shouldShowMenuItem(string $menuItem): bool
     {
-        // Démarre la session si elle n'est pas déjà active
-        if (session_status() == PHP_SESSION_NONE) {
-            session_start();
-        }
-
-        // Si l'utilisateur n'a pas de function_id, ne rien afficher
-        if (!isset($_SESSION['user_function_id'])) {
+        // Vérification de l'authentification avec le UserService
+        if (!$this->userService->isAuthenticated()) {
             return false;
         }
 
-        $userFunctionId = (int)$_SESSION['user_function_id'];
+        $userRole = $this->userService->getCurrentUserRole();
+        
+        // Si l'utilisateur n'a pas de rôle défini, ne rien afficher
+        if ($userRole === null) {
+            return false;
+        }
 
         // Commercial ou Client : accès aux entreprises et commandes
-        if ($userFunctionId == 1 || $userFunctionId == 2) {
+        if ($userRole == 1 || $userRole == 2) {
             return in_array($menuItem, ['companies', 'orders']);
         }
 
         // Logisticien : accès aux commandes et stock
-        if ($userFunctionId == 3) {
+        if ($userRole == 3) {
             return in_array($menuItem, ['orders', 'stock']);
         }
 
@@ -95,7 +113,7 @@ class BaseTemplate
 
         // Génération des classes CSS dynamiques pour chaque lien selon son état actif
         // Permet de mettre en évidence visuellement la page courante
-        $homeNavClasses = $this->getNavLinkClasses(['/Home'], $currentRoute);
+        $dashboardNavClasses = $this->getNavLinkClasses(['/Dashboard'], $currentRoute);
         $companiesNavClasses = $this->getNavLinkClasses(['/Companies', '/ModifyCompany'], $currentRoute);
         $ordersNavClasses = $this->getNavLinkClasses(['/Commands', '/ModifyCommand'], $currentRoute);
         $stockNavClasses = $this->getNavLinkClasses(['/Stock'], $currentRoute);
@@ -121,7 +139,7 @@ class BaseTemplate
                     <!-- Header principal pour desktop -->
                     <div class="hidden lg:flex justify-between items-center">
                         <div class="flex items-center">
-                            <a href="/Home" class="flex items-center text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                            <a href="/Dashboard" class="flex items-center text-xl font-bold text-gray-800 hover:text-blue-600 transition-colors">
                                 <img src="/public/assets/img/gsb-logo-no-name.png" alt="GSB Logo" class="h-8 w-auto mr-3">
                                 GSB Central
                             </a>
@@ -129,7 +147,7 @@ class BaseTemplate
                         
                         <!-- Navigation desktop -->
                         <ul class="hidden lg:flex space-x-6">
-                            <li><a href="/Home" class="{$homeNavClasses} transition-colors">Tableau de bord</a></li>
+                            <li><a href="/Dashboard" class="{$dashboardNavClasses} transition-colors">Tableau de bord</a></li>
                             {$companiesMenuItem}
                             {$ordersMenuItem}
                             {$stockMenuItem}
@@ -156,7 +174,7 @@ class BaseTemplate
                         
                         <!-- Titre au centre -->
                         <div class="flex-1 flex justify-center">
-                            <a href="/Home" class="flex items-center text-lg font-bold text-gray-800 hover:text-blue-600 transition-colors">
+                            <a href="/Dashboard" class="flex items-center text-lg font-bold text-gray-800 hover:text-blue-600 transition-colors">
                                 <img src="/public/assets/img/gsb-logo-no-name.png" alt="GSB Logo" class="h-8 w-auto mr-2">
                                 GSB Central
                             </a>
@@ -166,7 +184,7 @@ class BaseTemplate
                     <!-- Menu mobile -->
                     <div id="mobileMenu" class="hidden lg:hidden mt-4 pb-4 border-t border-gray-200">
                         <ul class="flex flex-col space-y-3 pt-4">
-                            <li><a href="/Home" class="{$homeNavClasses} transition-colors block py-2">Tableau de bord</a></li>
+                            <li><a href="/Dashboard" class="{$dashboardNavClasses} transition-colors block py-2">Tableau de bord</a></li>
                             {$companiesMobileItem}
                             {$ordersMobileItem}
                             {$stockMobileItem}
@@ -325,6 +343,7 @@ class BaseTemplate
             <link rel="canonical" href="https://gsb-nolan-liogier.fr">
             <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
             <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+            <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         </head>
         <body class="{$bodyClass}">
             {$header}

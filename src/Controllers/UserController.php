@@ -6,6 +6,7 @@ use App\Repositories\UserRepository;
 use Routing\Router;
 use App\Helpers\RenderService;
 use App\Helpers\StatusMessageService;
+use App\Helpers\UserService;
 
 /**
  * Classe UserController
@@ -42,6 +43,13 @@ class UserController
     private StatusMessageService $statusMessageService;
 
     /**
+     * Service utilisateur pour la gestion des données utilisateur.
+     * 
+     * @var UserService
+     */
+    private UserService $userService;
+
+    /**
      * Initialise le contrôleur en créant toutes les dépendances nécessaires.
      * 
      * Les services sont instanciés ici pour faciliter la gestion des sessions
@@ -55,6 +63,7 @@ class UserController
         $this->renderService = new RenderService();
         $this->statusMessageService = new StatusMessageService();
         $this->router = new Router();
+        $this->userService = new UserService();
     }
 
     /**
@@ -119,15 +128,13 @@ class UserController
         // Succès : message de confirmation et création de la session utilisateur
         $this->statusMessageService->setMessage('Connexion réussie', 'success');
         
-        // Stockage des informations utilisateur dans la session pour l'authentification ultérieure
+        // Stockage sécurisé des informations utilisateur dans la session
+        // Seul l'email est stocké directement, le reste est récupéré via UserService
         $_SESSION['user_email'] = $user['email'];
-        $_SESSION['user_role'] = $user['function_name'];
-        $_SESSION['user_function_id'] = $user['fk_function_id'];
-        $_SESSION['user_firstname'] = $user['firstname'];
-        $_SESSION['user_lastname'] = $user['lastname'];
+        $_SESSION['user_hash'] = $this->userService->generateUserHash($user['user_id']);
         
-        // Redirection vers la page d'accueil après authentification réussie
-        $this->router->getRoute('/Home');
+        // Redirection vers le tableau de bord après authentification réussie
+        $this->router->getRoute('/Dashboard');
         exit;
     }
 

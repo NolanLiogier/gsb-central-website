@@ -7,6 +7,7 @@ use App\Repositories\UserRepository;
 use App\Helpers\RenderService;
 use App\Helpers\AuthenticationService;
 use App\Helpers\PermissionVerificationService;
+use App\Helpers\UserService;
 use Routing\Router;
 use App\Helpers\StatusMessageService;
 
@@ -59,6 +60,13 @@ class CompaniesController {
     private PermissionVerificationService $permissionVerificationService;
     
     /**
+     * Service utilisateur pour la récupération des données utilisateur.
+     * 
+     * @var UserService
+     */
+    private UserService $userService;
+    
+    /**
      * Router pour les redirections après traitement des requêtes.
      * 
      * @var Router
@@ -79,24 +87,25 @@ class CompaniesController {
         $this->authenticationService = new AuthenticationService();
         $this->statusMessageService = new StatusMessageService();
         $this->permissionVerificationService = new PermissionVerificationService();
+        $this->userService = new UserService();
         $this->router = new Router();
     }
 
     /**
      * Récupère les informations complètes de l'utilisateur connecté depuis la base de données.
-     * Utilise l'email de la session pour récupérer les informations utilisateur.
+     * Utilise le UserService pour récupérer les informations utilisateur de manière sécurisée.
      *
      * @return array Informations utilisateur (user_id, email, fk_company_id, fk_function_id, etc.)
      */
     private function getCurrentUser(): array {
-        $userEmail = $_SESSION['user_email'] ?? '';
+        $user = $this->userService->getCurrentUser();
         
-        if (empty($userEmail)) {
+        if (empty($user)) {
             $this->router->getRoute('/Login');
             exit;
         }
         
-        return $this->userRepository->getUserByEmail($userEmail);
+        return $user;
     }
 
     /**

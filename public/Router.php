@@ -3,11 +3,12 @@
 namespace Routing;
 
 use App\Controllers\UserController;
-use App\Controllers\HomeController;
+use App\Controllers\DashboardController;
 use App\Controllers\CompaniesController;
 use App\Controllers\StockController;
 use App\Controllers\CommandController;
 use App\Controllers\NotFoundController;
+use App\Helpers\UserService;
 use Dotenv\Dotenv;
 
 /**
@@ -25,6 +26,13 @@ class Router {
     private string $baseUrl;
 
     /**
+     * Service utilisateur pour la vérification de l'authentification.
+     * 
+     * @var UserService
+     */
+    private UserService $userService;
+
+    /**
      * Initialise le router en chargeant les variables d'environnement
      * et en configurant l'URL de base depuis .env.
      * 
@@ -35,6 +43,7 @@ class Router {
         $dotenv = Dotenv::createImmutable(__DIR__ . '/..');
         $dotenv->load();
         $this->baseUrl = $_ENV['BASE_URL'];
+        $this->userService = new UserService();
     }
     /**
      * Vérifie si l'utilisateur actuel a accès à la route demandée selon son rôle.
@@ -54,21 +63,26 @@ class Router {
             return true;
         }
 
-        // Si la session n'a pas de function_id, pas d'accès
-        if (!isset($_SESSION['user_function_id'])) {
+        // Vérification de l'authentification avec le UserService
+        if (!$this->userService->isAuthenticated()) {
             return false;
         }
 
-        $userFunctionId = (int)$_SESSION['user_function_id'];
+        $userRole = $this->userService->getCurrentUserRole();
+        
+        // Si l'utilisateur n'a pas de rôle défini, pas d'accès
+        if ($userRole === null) {
+            return false;
+        }
 
         // Commercial ou Client : accès aux entreprises et commandes
-        if ($userFunctionId == 1 || $userFunctionId == 2) {
-            return in_array($route, ['/Home', '/Companies', '/ModifyCompany', '/Commands', '/ModifyCommand']);
+        if ($userRole == 1 || $userRole == 2) {
+            return in_array($route, ['/Dashboard', '/Companies', '/ModifyCompany', '/Commands', '/ModifyCommand']);
         }
 
         // Logisticien : accès aux commandes et stock
-        if ($userFunctionId == 3) {
-            return in_array($route, ['/Home', '/Commands', '/ModifyCommand', '/Stock', '/ModifyStock']);
+        if ($userRole == 3) {
+            return in_array($route, ['/Dashboard', '/Commands', '/ModifyCommand', '/Stock', '/ModifyStock']);
         }
 
         // Par défaut, refuser l'accès
@@ -113,12 +127,12 @@ class Router {
         // Redirige vers la page de connexion si l'utilisateur n'a pas accès à cette route
         if (!$this->hasAccessToRoute($route)) {
             // Si l'utilisateur n'est pas connecté, redirige vers le login
-            if (!isset($_SESSION['user_email'])) {
+            if (!$this->userService->isAuthenticated()) {
                 header('Location: ' . $this->baseUrl . '/Login');
                 exit;
             }
-            // Si l'utilisateur n'a pas les permissions, redirige vers le home
-            header('Location: ' . $this->baseUrl . '/Home');
+            // Si l'utilisateur n'a pas les permissions, redirige vers le tableau de bord
+            header('Location: ' . $this->baseUrl . '/Dashboard');
             exit;
         }
 
@@ -127,7 +141,7 @@ class Router {
             '/' => new UserController(),
             '/Login' => new UserController(),
             '/Logout' => new UserController(),
-            '/Home' => new HomeController(),
+            '/Dashboard' => new DashboardController(),
             '/Companies' => new CompaniesController(),
             '/ModifyCompany' => new CompaniesController(),
             '/Stock' => new StockController(),

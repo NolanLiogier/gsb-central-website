@@ -8,7 +8,7 @@ use Routing\Router;
  * Classe AuthenticationService
  * 
  * Service de vérification et de gestion de l'authentification des utilisateurs.
- * Vérifie la présence des variables de session nécessaires et redirige les
+ * Utilise le UserService pour vérifier l'authentification et redirige les
  * utilisateurs non authentifiés vers la page de connexion.
  */
 class AuthenticationService
@@ -21,20 +21,29 @@ class AuthenticationService
     private Router $router;
 
     /**
-     * Initialise le service d'authentification en créant l'instance du router.
-     * Le router est nécessaire pour rediriger les utilisateurs non authentifiés.
+     * Service utilisateur pour la vérification de l'authentification.
+     * 
+     * @var UserService
+     */
+    private UserService $userService;
+
+    /**
+     * Initialise le service d'authentification en créant les instances nécessaires.
+     * Le router est nécessaire pour rediriger les utilisateurs non authentifiés,
+     * et le UserService pour vérifier l'authentification de manière sécurisée.
      * 
      * @return void
      */
     public function __construct()
     {
         $this->router = new Router();
+        $this->userService = new UserService();
     }
 
     /**
      * Vérifie l'authentification de l'utilisateur actuel.
      * 
-     * Vérifie la présence des variables de session requises pour l'authentification.
+     * Utilise le UserService pour vérifier l'authentification de manière sécurisée.
      * Redirige automatiquement vers la page de connexion si l'utilisateur n'est pas
      * authentifié. Cette méthode doit être appelée au début de chaque page protégée.
      *
@@ -43,7 +52,7 @@ class AuthenticationService
     public function verifyAuthentication(): void
     {
         // Si l'utilisateur n'est pas connecté, redirection immédiate vers la page de connexion
-        if (!$this->isUserLoggedIn()) {
+        if (!$this->userService->isAuthenticated()) {
             $this->router->getRoute('/Login');
             exit;
         }
@@ -52,21 +61,14 @@ class AuthenticationService
     /**
      * Détermine si l'utilisateur est actuellement authentifié.
      * 
-     * Un utilisateur est considéré comme authentifié s'il possède à la fois
-     * un email, un rôle et un function_id dans la session, et que ces valeurs ne sont pas vides.
-     * Cette vérification empêche les sessions partiellement corrompues et garantit
-     * la présence des informations nécessaires pour la gestion des permissions.
+     * Utilise le UserService pour vérifier l'authentification de manière sécurisée.
+     * Cette méthode vérifie la présence des données de session et l'intégrité
+     * des données avec le hash de sécurité.
      *
      * @return bool True si l'utilisateur est connecté, false sinon.
      */
     public function isUserLoggedIn(): bool
     {
-        // Vérification de la présence ET de la non-vacuité des variables de session essentielles
-        return isset($_SESSION['user_email']) && 
-               isset($_SESSION['user_role']) && 
-               isset($_SESSION['user_function_id']) &&
-               !empty($_SESSION['user_email']) && 
-               !empty($_SESSION['user_role']) &&
-               !empty($_SESSION['user_function_id']);
+        return $this->userService->isAuthenticated();
     }
 }

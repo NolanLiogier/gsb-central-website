@@ -2,21 +2,21 @@
 
 namespace App\Controllers;
 
-use App\Repositories\HomeRepository;
+use App\Repositories\DashboardRepository;
 use App\Helpers\RenderService;
 use App\Helpers\AuthenticationService;
 
 /**
- * Classe HomeController
- * Gère l'affichage de la page d'accueil.
+ * Classe DashboardController
+ * Gère l'affichage du tableau de bord avec statistiques selon le rôle.
  */
-class HomeController {
+class DashboardController {
     /**
-     * Repository pour l'accès aux données de la page d'accueil.
+     * Repository pour l'accès aux données du tableau de bord.
      * 
-     * @var HomeRepository
+     * @var DashboardRepository
      */
-    private HomeRepository $homeRepository;
+    private DashboardRepository $dashboardRepository;
     
     /**
      * Service de rendu des templates.
@@ -27,7 +27,7 @@ class HomeController {
     
     /**
      * Service de vérification d'authentification.
-     * Garantit que seuls les utilisateurs connectés peuvent accéder à l'accueil.
+     * Garantit que seuls les utilisateurs connectés peuvent accéder au tableau de bord.
      * 
      * @var AuthenticationService
      */
@@ -40,16 +40,16 @@ class HomeController {
      */
     public function __construct()
     {
-        $this->homeRepository = new HomeRepository();
+        $this->dashboardRepository = new DashboardRepository();
         $this->renderService = new RenderService();
         $this->authenticationService = new AuthenticationService();
     }
     
     /**
-     * Affiche la page d'accueil avec les données récupérées.
+     * Affiche le tableau de bord avec les données spécifiques au rôle.
      * 
      * Vérifie d'abord que l'utilisateur est authentifié, puis récupère
-     * les données de la page d'accueil (statistiques, notifications, etc.)
+     * les données du tableau de bord selon le rôle (client, commercial, logisticien)
      * et affiche le template correspondant.
      *
      * @return void
@@ -58,11 +58,11 @@ class HomeController {
         // Protection de l'accès : vérification de l'authentification obligatoire
         $this->authenticationService->verifyAuthentication();
         
-        // Récupération des données de la page d'accueil
-        $datas = $this->homeRepository->getDatas();
+        // Récupération des données du tableau de bord selon le rôle
+        $datas = $this->dashboardRepository->getDatas();
         
         // Affichage du template avec les données récupérées
-        $this->renderService->displayTemplates("Home", $datas, "Accueil");
+        $this->renderService->displayTemplates("Dashboard", $datas, "Tableau de bord");
         exit;
     }
 }

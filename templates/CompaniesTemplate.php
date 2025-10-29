@@ -132,16 +132,18 @@ HTML;
             $salesmanName = $this->formatSalesmanName($company);
             
             // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
-            $companyNameUpper = strtoupper($company['company_name']);
+            // Utilisation de mb_strtoupper pour gérer correctement les caractères accentués (é → É, à → À, etc.)
+            $companyNameUpper = mb_strtoupper($company['company_name'], 'UTF-8');
             
             // Échappement XSS de toutes les valeurs pour éviter les injections
             $companyId = htmlspecialchars($company['company_id']);
+            $companyIdJson = json_encode($company['company_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
             $companyName = htmlspecialchars($companyNameUpper);
             $sectorName = htmlspecialchars($company['sector_name']);
             $salesmanNameEscaped = htmlspecialchars($salesmanName);
             
             $html .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$companyId}')">
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm({$companyIdJson})">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
                                 {$companyName}

@@ -226,19 +226,27 @@ class CompaniesRepository {
             }
 
             // Préparation de la requête UPDATE avec paramètres nommés pour éviter les injections SQL
-            $query = "UPDATE companies 
-                      SET company_name = :company_name, 
-                          siret = :siret, 
-                          siren = :siren, 
-                          fk_sector_id = :sector_id, 
-                          fk_salesman_id = :salesman_id
-                      WHERE company_id = :company_id";
+            // Le commercial n'est mis à jour que s'il est fourni dans les données (pour les clients, il n'est pas fourni)
+            $updateSalesman = isset($companyData['salesman']);
+            
+            if ($updateSalesman) {
+                $query = "UPDATE companies 
+                          SET company_name = :company_name, 
+                              siret = :siret, 
+                              siren = :siren, 
+                              fk_sector_id = :sector_id, 
+                              fk_salesman_id = :salesman_id
+                          WHERE company_id = :company_id";
+            } else {
+                $query = "UPDATE companies 
+                          SET company_name = :company_name, 
+                              siret = :siret, 
+                              siren = :siren, 
+                              fk_sector_id = :sector_id
+                          WHERE company_id = :company_id";
+            }
             
             $stmt = $this->connection->prepare($query);
-            
-            // Gestion du commercial : valeur nullable (peut être null si non assigné)
-            // UnbindParams ne supporte pas null directement, donc on gère ici
-            $salesmanId = !empty($companyData['salesman']) ? $companyData['salesman'] : null;
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':company_id', $companyData['company_id'], PDO::PARAM_INT);
@@ -246,7 +254,13 @@ class CompaniesRepository {
             $stmt->bindParam(':siret', $companyData['siret'], PDO::PARAM_STR);
             $stmt->bindParam(':siren', $companyData['siren'], PDO::PARAM_STR);
             $stmt->bindParam(':sector_id', $companyData['sector'], PDO::PARAM_INT);
-            $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
+            
+            // Bind du commercial seulement s'il est présent dans les données (pas pour les clients)
+            if ($updateSalesman) {
+                // Gestion du commercial : valeur nullable (peut être null si non assigné)
+                $salesmanId = !empty($companyData['salesman']) ? $companyData['salesman'] : null;
+                $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
+            }
             
             return $stmt->execute();
             

@@ -307,14 +307,22 @@ class CompaniesController {
         
         // Normalisation des données : trim pour supprimer les espaces et gestion des valeurs par défaut
         // Évite les erreurs de données manquantes et normalise les chaînes de caractères
+        // Pour les clients (function_id = 2), on ne traite pas le champ salesman (non envoyé dans le POST)
+        $userFunctionId = $user['fk_function_id'] ?? null;
+        $isClient = $userFunctionId == 2;
+        
         $companyData = [
             'company_id' => $companyId,
             'company_name' => trim($datas['companyName'] ?? ''),
             'siret' => trim($datas['siret'] ?? ''),
             'siren' => trim($datas['siren'] ?? ''),
-            'sector' => $datas['sector'] ?? '',
-            'salesman' => $datas['salesman'] ?? ''
+            'sector' => $datas['sector'] ?? ''
         ];
+        
+        // Ajout du commercial seulement si ce n'est pas un client (les clients ne peuvent pas modifier leur commercial)
+        if (!$isClient) {
+            $companyData['salesman'] = $datas['salesman'] ?? '';
+        }
 
         // Vérification des permissions avec le service de vérification
         if (!$this->permissionVerificationService->canAccessCompany($user, ['companyId' => $companyId])) {

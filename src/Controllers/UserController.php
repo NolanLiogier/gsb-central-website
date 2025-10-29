@@ -114,28 +114,24 @@ class UserController
         $user = $this->userRepository->getUserByEmail($email);
         if (empty($user)) {
             $this->statusMessageService->setMessage('Utilisateur inconnu', 'error');
-            $this->router->getRoute('/Login');
-            exit;
+            $this->router->redirect('/Login', 303);
         }
 
         // Vérification du mot de passe hashé avec password_verify (sécurité contre timing attacks)
         if (!password_verify($password, $user['password'])) {
             $this->statusMessageService->setMessage('Mot de passe incorrect', 'error');
-            $this->router->getRoute('/Login');
-            exit;
+            $this->router->redirect('/Login', 303);
         }
 
         // Succès : message de confirmation et création de la session utilisateur
         $this->statusMessageService->setMessage('Connexion réussie', 'success');
         
         // Stockage sécurisé des informations utilisateur dans la session
-        // Seul l'email est stocké directement, le reste est récupéré via UserService
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_hash'] = $this->userService->generateUserHash($user['user_id']);
         
         // Redirection vers le tableau de bord après authentification réussie
-        $this->router->getRoute('/Dashboard');
-        exit;
+        $this->router->redirect('/Dashboard', 303);
     }
 
     /**

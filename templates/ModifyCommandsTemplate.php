@@ -489,9 +489,12 @@ HTML;
      * 
      * Crée un objet JSON contenant les informations des produits (ID, nom, prix)
      * nécessaires pour le calcul dynamique du total de la commande.
+     * Le JSON est placé dans une balise <script type="application/json"> et lu
+     * avec textContent, donc pas besoin d'échappement HTML supplémentaire.
+     * JSON_HEX_TAG gère déjà la sécurisation contre les balises </script>.
      *
      * @param array $products Liste des produits avec leurs informations.
-     * @return string Code JSON généré pour les données des produits (échappé pour HTML).
+     * @return string Code JSON généré pour les données des produits (non échappé, sécurisé avec JSON_HEX_TAG).
      */
     private function generateProductsJson(array $products): string
     {
@@ -506,8 +509,10 @@ HTML;
             ];
         }
         
-        // Convertir en JSON et échapper pour l'affichage HTML
-        return htmlspecialchars(json_encode($productsData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT));
+        // Convertir en JSON avec flags de sécurité (JSON_HEX_TAG convertit < et > en séquences Unicode)
+        // Pas besoin de htmlspecialchars() car le JSON est dans une balise <script type="application/json">
+        // et lu avec textContent, pas innerHTML
+        return json_encode($productsData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 
     /**

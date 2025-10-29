@@ -179,11 +179,11 @@ class ModifyCompanyTemplate {
         HTML;
         
         // Ajout du select commercial avec les bons attributs selon le type d'utilisateur
+        // Pour les clients, on retire le name pour qu'il ne soit pas envoyé dans la requête POST
         if ($isClient) {
             $modifyCompanyContent .= <<<HTML
                             <select 
                                 id="salesman" 
-                                name="salesman" 
                                 disabled
                                 class="w-full px-4 py-3 bg-gray-100 border border-gray-200 rounded-lg text-gray-600 cursor-not-allowed" 
                                 style="pointer-events: none;">

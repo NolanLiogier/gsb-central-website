@@ -136,7 +136,9 @@ HTML;
             
             // Échappement XSS de toutes les valeurs pour éviter les injections
             $productId = htmlspecialchars($product['product_id']);
-            $productName = htmlspecialchars(strtoupper($product['product_name']));
+            $productIdJson = json_encode($product['product_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            // Utilisation de mb_strtoupper pour gérer correctement les caractères accentués (é → É, à → À, etc.)
+            $productName = htmlspecialchars(mb_strtoupper($product['product_name'], 'UTF-8'));
             $quantity = htmlspecialchars($product['quantity']);
             $price = number_format((float)($product['price'] ?? 0), 2, ',', ' ') . ' €';
             $valueTotal = number_format($totalValue, 2, ',', ' ') . ' €';
@@ -145,7 +147,7 @@ HTML;
             $quantityData = $this->formatQuantityDisplay($quantity);
             
             $html .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm('{$productId}')">
+                    <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm({$productIdJson})">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
                                 {$productName}
@@ -205,4 +207,3 @@ HTML;
         ];
     }
 }
-

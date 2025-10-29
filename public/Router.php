@@ -90,6 +90,25 @@ class Router {
     }
 
     /**
+     * Redirige vers une route avec un code HTTP spécifique.
+     * 
+     * Méthode utilitaire pour les redirections avec contrôle du code HTTP.
+     * Utile notamment pour les redirections après POST (HTTP 303) afin d'éviter
+     * la resoumission automatique du formulaire.
+     *
+     * @param string $route La route de destination.
+     * @param int $statusCode Le code HTTP de redirection (par défaut 302).
+     * @return void
+     */
+    public function redirect(string $route, int $statusCode = 302): void
+    {
+        $cleanRoute = '/' . ltrim($route, '/');
+        $redirectUrl = $this->baseUrl . $cleanRoute;
+        header('Location: ' . $redirectUrl, true, $statusCode);
+        exit;
+    }
+
+    /**
      * Détermine la route actuelle et instancie le contrôleur correspondant.
      * 
      * Gère le routage en fonction de l'URI de la requête. Si une route externe est fournie,
@@ -110,12 +129,7 @@ class Router {
         // Si la route fournie diffère de l'URI actuel, redirige vers l'URL complète
         // Cela permet de gérer les appels externes au router avec redirection propre
         if ($route !== $_SERVER['REQUEST_URI']) {
-            $baseUrl = $this->baseUrl;
-            $cleanRoute = '/' . ltrim($route, '/');
-            $redirectUrl = $baseUrl . $cleanRoute;
-            
-            header('Location: ' . $redirectUrl, true);
-            exit;
+            $this->redirect($route, 302);
         }
 
         // Démarre la session si elle n'est pas déjà active
@@ -128,12 +142,10 @@ class Router {
         if (!$this->hasAccessToRoute($route)) {
             // Si l'utilisateur n'est pas connecté, redirige vers le login
             if (!$this->userService->isAuthenticated()) {
-                header('Location: ' . $this->baseUrl . '/Login');
-                exit;
+                $this->redirect('/Login', 302);
             }
             // Si l'utilisateur n'a pas les permissions, redirige vers le tableau de bord
-            header('Location: ' . $this->baseUrl . '/Dashboard');
-            exit;
+            $this->redirect('/Dashboard', 302);
         }
 
         // Table de routage : associe chaque chemin à son contrôleur

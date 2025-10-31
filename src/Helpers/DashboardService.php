@@ -59,14 +59,13 @@ class DashboardService {
             'objective' => $objective,
             'topClients' => $datas['topClients'] ?? [],
             'topProducts' => $datas['topProducts'] ?? [],
-            'pendingOrders' => $datas['pendingOrders'] ?? [],
         ];
     }
 
     /**
      * Prépare les données formatées pour le dashboard client.
      * 
-     * Formate les données pour les graphiques, statistiques, historique et montants client.
+     * Formate les données pour les graphiques, statistiques et montants client.
      *
      * @param array $datas Données brutes du client depuis le repository.
      * @return array Données formatées prêtes pour l'affichage.
@@ -76,7 +75,6 @@ class DashboardService {
         $mostOrderedProducts = $datas['mostOrderedProducts'] ?? [];
         $ordersByStatus = $datas['ordersByStatus'] ?? [];
         $totalAmountSpent = (float)($datas['totalAmountSpent'] ?? 0);
-        $ordersHistory = $datas['ordersHistory'] ?? [];
         
         // Préparation des données pour le graphique
         $products = [];
@@ -92,13 +90,6 @@ class DashboardService {
         // Formatage du montant total
         $totalAmountFormatted = number_format($totalAmountSpent, 2, ',', ' ') . ' €';
         
-        // Formatage de l'historique avec montants
-        $formattedHistory = [];
-        foreach ($ordersHistory as $order) {
-            $order['total_amount_formatted'] = number_format((float)($order['total_amount'] ?? 0), 2, ',', ' ') . ' €';
-            $formattedHistory[] = $order;
-        }
-        
         return [
             'totalOrders' => $totalOrders,
             'chartLabels' => json_encode($products, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP),
@@ -106,7 +97,6 @@ class DashboardService {
             'ordersByStatus' => $ordersByStatus,
             'totalAmountSpent' => $totalAmountSpent,
             'totalAmountFormatted' => $totalAmountFormatted,
-            'ordersHistory' => $formattedHistory,
         ];
     }
 
@@ -132,7 +122,6 @@ class DashboardService {
         $lowStockProducts = $datas['lowStockProducts'] ?? [];
         $totalStockValue = (float)($datas['totalStockValue'] ?? 0);
         $stockRotation = $datas['stockRotation'] ?? [];
-        $stockMovements = $datas['stockMovements'] ?? [];
         
         // Formatage de la valeur du stock
         $totalStockValueFormatted = number_format($totalStockValue, 2, ',', ' ') . ' €';
@@ -154,7 +143,6 @@ class DashboardService {
             'totalStockValue' => $totalStockValue,
             'totalStockValueFormatted' => $totalStockValueFormatted,
             'stockRotation' => $stockRotation,
-            'stockMovements' => $stockMovements,
             // Graphiques
             'rotationLabelsJson' => $rotationLabelsJson,
             'rotationCountsJson' => $rotationCountsJson,

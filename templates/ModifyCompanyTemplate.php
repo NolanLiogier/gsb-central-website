@@ -19,7 +19,7 @@ class ModifyCompanyTemplate {
      * et présélectionne les valeurs actuelles de l'entreprise. Inclut des boutons d'annulation
      * et de sauvegarde.
      *
-     * @param array $datas Données de l'entreprise (company_id, company_name, siret, siren, selected_sector_id, selected_salesman_id) et listes (sectors, salesmen).
+     * @param array $datas Données de l'entreprise (company_id, company_name, siret, siren, delivery_address, selected_sector_id, selected_salesman_id) et listes (sectors, salesmen).
      * @return string HTML complet du formulaire de modification.
      */
     public function displayModifyCompany(array $datas = []): string {
@@ -34,6 +34,7 @@ class ModifyCompanyTemplate {
         $companyName = htmlspecialchars($datas['company_name'] ?? '');
         $siret = htmlspecialchars($datas['siret'] ?? '');
         $siren = htmlspecialchars($datas['siren'] ?? '');
+        $deliveryAddress = htmlspecialchars($datas['delivery_address'] ?? '');
         $companyIdValue = htmlspecialchars($datas['company_id'] ?? 0);
 
         // Détection du mode et récupération des textes appropriés
@@ -153,6 +154,22 @@ class ModifyCompanyTemplate {
                                 placeholder="123456789">
                             <p class="text-xs text-gray-500 mt-2">Le SIREN doit contenir exactement 9 chiffres</p>
                         </div>
+                    </div>
+
+                    <!-- Adresse de livraison -->
+                    <div>
+                        <label for="deliveryAddress" class="block text-sm font-semibold text-gray-700 mb-3">
+                            Adresse de livraison
+                        </label>
+                        <input 
+                            type="text" 
+                            id="deliveryAddress" 
+                            name="deliveryAddress" 
+                            value="{$deliveryAddress}"
+                            maxlength="255"
+                            class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-900 placeholder-gray-500"
+                            placeholder="Entrez l'adresse de livraison">
+                        <p class="text-xs text-gray-500 mt-2">Adresse de livraison de l'entreprise (optionnel)</p>
                     </div>
 
                     <!-- Grille pour Secteur et Commercial -->

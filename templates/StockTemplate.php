@@ -2,6 +2,8 @@
 
 namespace Templates;
 
+use Templates\widgets\TableWidget;
+
 /**
  * Classe StockTemplate
  * 
@@ -35,44 +37,31 @@ class StockTemplate {
                 </button>
             </form>
         </div>
-
-        <!-- Tableau du stock -->
-        <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            PRODUIT
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            QUANTITÉ
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            PRIX UNITAIRE
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            VALEUR TOTALE
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-        HTML;
+HTML;
 
         // Récupération sécurisée de la liste des produits (tableau vide si absente)
         $products = is_array($datas) ? $datas : [];
 
-        // Vérification si la liste des produits est vide
-        if (empty($products)) {
-            $stockContent .= $this->generateEmptyState();
-        } else {
-            // Génération dynamique des lignes du tableau pour chaque produit
-            $stockContent .= $this->generateProductRows($products);
-        }
+        // Génération des en-têtes
+        $headers = ['PRODUIT', 'QUANTITÉ', 'PRIX UNITAIRE', 'VALEUR TOTALE'];
+
+        // Utilisation du TableWidget pour générer le tableau
+        $tableWidget = new TableWidget();
+        $tableHtml = $tableWidget->render([
+            'headers' => $headers,
+            'rows' => $products,
+            'itemsPerPage' => 10,
+            'baseUrl' => '/Stock',
+            'emptyMessage' => 'Aucun produit en stock',
+            'emptyIcon' => 'fa-box',
+            'rowCallback' => function($product) {
+                return $this->generateProductRow($product);
+            }
+        ]);
+
+        $stockContent .= $tableHtml;
 
         $stockContent .= <<<HTML
-                </tbody>
-            </table>
-        </div>
 
         <!-- Formulaire caché pour soumettre l'ID du produit lors du clic sur une ligne -->
         <!-- Permet de naviguer vers la page de modification sans formulaire visible -->
@@ -96,57 +85,32 @@ class StockTemplate {
     }
 
     /**
-     * Génère le message d'état vide lorsqu'il n'y a aucun produit.
-     * 
-     * Crée une ligne de tableau avec un message informatif centré.
-     *
-     * @return string HTML de l'état vide généré.
-     */
-    private function generateEmptyState(): string
-    {
-        return <<<HTML
-                    <tr>
-                        <td colspan="4" class="px-6 py-12 text-center">
-                            <div class="text-gray-500">
-                                <i class="fas fa-box text-4xl mb-4"></i>
-                                <p class="text-lg font-medium">Aucun produit en stock</p>
-                                <p class="text-sm mt-2">Commencez par ajouter un produit.</p>
-                            </div>
-                        </td>
-                    </tr>
-HTML;
-    }
-
-    /**
-     * Génère les lignes du tableau pour chaque produit.
+     * Génère une ligne du tableau pour un produit.
      * 
      * Crée une ligne de tableau avec les informations du produit :
      * nom, quantité (avec badge de statut), prix unitaire et valeur totale.
      *
-     * @param array $products Liste des produits à afficher.
-     * @return string HTML des lignes de produits générées.
+     * @param array $product Données du produit à afficher.
+     * @return string HTML de la ligne de produit générée.
      */
-    private function generateProductRows(array $products): string
+    private function generateProductRow(array $product): string
     {
-        $html = '';
+        // Calcul de la valeur totale pour chaque produit
+        $totalValue = (float)($product['quantity'] ?? 0) * (float)($product['price'] ?? 0);
         
-        foreach ($products as $product) {
-            // Calcul de la valeur totale pour chaque produit
-            $totalValue = (float)($product['quantity'] ?? 0) * (float)($product['price'] ?? 0);
-            
-            // Échappement XSS de toutes les valeurs pour éviter les injections
-            $productId = htmlspecialchars($product['product_id']);
-            $productIdJson = json_encode($product['product_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-            // Utilisation de mb_strtoupper pour gérer correctement les caractères accentués (é → É, à → À, etc.)
-            $productName = htmlspecialchars(mb_strtoupper($product['product_name'], 'UTF-8'));
-            $quantity = htmlspecialchars($product['quantity']);
-            $price = number_format((float)($product['price'] ?? 0), 2, ',', ' ') . ' €';
-            $valueTotal = number_format($totalValue, 2, ',', ' ') . ' €';
-            
-            // Génération des classes et badges selon la quantité en stock
-            $quantityData = $this->formatQuantityDisplay($quantity);
-            
-            $html .= <<<HTML
+        // Échappement XSS de toutes les valeurs pour éviter les injections
+        $productId = htmlspecialchars($product['product_id']);
+        $productIdJson = json_encode($product['product_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        // Utilisation de mb_strtoupper pour gérer correctement les caractères accentués (é → É, à → À, etc.)
+        $productName = htmlspecialchars(mb_strtoupper($product['product_name'], 'UTF-8'));
+        $quantity = htmlspecialchars($product['quantity']);
+        $price = number_format((float)($product['price'] ?? 0), 2, ',', ' ') . ' €';
+        $valueTotal = number_format($totalValue, 2, ',', ' ') . ' €';
+        
+        // Génération des classes et badges selon la quantité en stock
+        $quantityData = $this->formatQuantityDisplay($quantity);
+        
+        return <<<HTML
                     <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm({$productIdJson})">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
@@ -171,9 +135,6 @@ HTML;
                         </td>
                     </tr>
 HTML;
-        }
-        
-        return $html;
     }
 
     /**

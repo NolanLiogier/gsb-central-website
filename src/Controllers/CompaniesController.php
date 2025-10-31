@@ -269,6 +269,7 @@ class CompaniesController {
             'company_name' => trim($datas['companyName'] ?? ''),
             'siret' => trim($datas['siret'] ?? ''),
             'siren' => trim($datas['siren'] ?? ''),
+            'delivery_address' => trim($datas['deliveryAddress'] ?? ''),
             'sector' => $datas['sector'] ?? '',
             'salesman' => $datas['salesman'] ?? ''
         ];
@@ -316,6 +317,7 @@ class CompaniesController {
             'company_name' => trim($datas['companyName'] ?? ''),
             'siret' => trim($datas['siret'] ?? ''),
             'siren' => trim($datas['siren'] ?? ''),
+            'delivery_address' => trim($datas['deliveryAddress'] ?? ''),
             'sector' => $datas['sector'] ?? ''
         ];
         

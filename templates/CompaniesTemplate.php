@@ -2,6 +2,8 @@
 
 namespace Templates;
 
+use Templates\widgets\TableWidget;
+
 /**
  * Classe CompaniesTemplate
  * 
@@ -35,41 +37,31 @@ class CompaniesTemplate {
                 </button>
             </form>
         </div>
-
-        <!-- Tableau des entreprises -->
-        <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            ENTREPRISE
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            SECTEUR
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            COMMERCIAL
-                        </th>
-                    </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-        HTML;
+HTML;
 
         // Récupération sécurisée de la liste des entreprises (tableau vide si absente)
         $companies = $datas['companies'] ?? [];
 
-        // Vérification si la liste des entreprises est vide
-        if (empty($companies)) {
-            $companiesContent .= $this->generateEmptyState();
-        } else {
-            // Génération dynamique des lignes du tableau pour chaque entreprise
-            $companiesContent .= $this->generateCompanyRows($companies);
-        }
+        // Génération des en-têtes
+        $headers = ['ENTREPRISE', 'SECTEUR', 'COMMERCIAL'];
+
+        // Utilisation du TableWidget pour générer le tableau
+        $tableWidget = new TableWidget();
+        $tableHtml = $tableWidget->render([
+            'headers' => $headers,
+            'rows' => $companies,
+            'itemsPerPage' => 10,
+            'baseUrl' => '/Companies',
+            'emptyMessage' => 'Aucune entreprise trouvée',
+            'emptyIcon' => 'fa-building',
+            'rowCallback' => function($company) {
+                return $this->generateCompanyRow($company);
+            }
+        ]);
+
+        $companiesContent .= $tableHtml;
 
         $companiesContent .= <<<HTML
-                </tbody>
-            </table>
-        </div>
 
         <!-- Formulaire caché pour soumettre l'ID de l'entreprise lors du clic sur une ligne -->
         <!-- Permet de naviguer vers la page de modification sans formulaire visible -->
@@ -93,56 +85,31 @@ class CompaniesTemplate {
     }
 
     /**
-     * Génère le message d'état vide lorsqu'il n'y a aucune entreprise.
-     * 
-     * Crée une ligne de tableau avec un message informatif centré.
-     *
-     * @return string HTML de l'état vide généré.
-     */
-    private function generateEmptyState(): string
-    {
-        return <<<HTML
-                    <tr>
-                        <td colspan="3" class="px-6 py-12 text-center">
-                            <div class="text-gray-500">
-                                <i class="fas fa-building text-4xl mb-4"></i>
-                                <p class="text-lg font-medium">Aucune entreprise trouvée</p>
-                                <p class="text-sm mt-2">Vous n'avez aucune entreprise assignée pour le moment.</p>
-                            </div>
-                        </td>
-                    </tr>
-HTML;
-    }
-
-    /**
-     * Génère les lignes du tableau pour chaque entreprise.
+     * Génère une ligne du tableau pour une entreprise.
      * 
      * Crée une ligne de tableau avec les informations de l'entreprise :
      * nom, secteur et commercial assigné. Gère le cas "non assigné" pour le commercial.
      *
-     * @param array $companies Liste des entreprises à afficher.
-     * @return string HTML des lignes d'entreprises générées.
+     * @param array $company Données de l'entreprise à afficher.
+     * @return string HTML de la ligne d'entreprise générée.
      */
-    private function generateCompanyRows(array $companies): string
+    private function generateCompanyRow(array $company): string
     {
-        $html = '';
+        // Construction du nom complet du commercial avec gestion du cas "non assigné"
+        $salesmanName = $this->formatSalesmanName($company);
         
-        foreach ($companies as $company) {
-            // Construction du nom complet du commercial avec gestion du cas "non assigné"
-            $salesmanName = $this->formatSalesmanName($company);
-            
-            // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
-            // Utilisation de mb_strtoupper pour gérer correctement les caractères accentués (é → É, à → À, etc.)
-            $companyNameUpper = mb_strtoupper($company['company_name'], 'UTF-8');
-            
-            // Échappement XSS de toutes les valeurs pour éviter les injections
-            $companyId = htmlspecialchars($company['company_id']);
-            $companyIdJson = json_encode($company['company_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-            $companyName = htmlspecialchars($companyNameUpper);
-            $sectorName = htmlspecialchars($company['sector_name']);
-            $salesmanNameEscaped = htmlspecialchars($salesmanName);
-            
-            $html .= <<<HTML
+        // Normalisation du nom d'entreprise en majuscules pour cohérence visuelle
+        // Utilisation de mb_strtoupper pour gérer correctement les caractères accentués (é → É, à → À, etc.)
+        $companyNameUpper = mb_strtoupper($company['company_name'], 'UTF-8');
+        
+        // Échappement XSS de toutes les valeurs pour éviter les injections
+        $companyId = htmlspecialchars($company['company_id']);
+        $companyIdJson = json_encode($company['company_id'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        $companyName = htmlspecialchars($companyNameUpper);
+        $sectorName = htmlspecialchars($company['sector_name']);
+        $salesmanNameEscaped = htmlspecialchars($salesmanName);
+        
+        return <<<HTML
                     <tr class="hover:bg-gray-50 transition-colors cursor-pointer" onclick="submitForm({$companyIdJson})">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm font-medium text-gray-900">
@@ -161,9 +128,6 @@ HTML;
                         </td>
                     </tr>
 HTML;
-        }
-        
-        return $html;
     }
 
     /**

@@ -78,19 +78,18 @@ class DashboardRepository {
     /**
      * Récupère les données pour un client.
      * 
-     * Retourne le nombre de commandes, les produits les plus commandés, l'historique,
+     * Retourne le nombre de commandes, les produits les plus commandés,
      * le montant total dépensé et les commandes par statut.
      *
      * @param int $userId ID de l'utilisateur.
      * @param int|null $companyId ID de l'entreprise du client.
-     * @return array Données du client (KPI, historique, montants).
+     * @return array Données du client (KPI, montants).
      */
     private function getClientDatas(int $userId, ?int $companyId): array {
         $totalOrders = $this->getClientTotalOrders($userId);
         $mostOrderedProducts = $this->getClientMostOrderedProducts($userId);
         $ordersByStatus = $this->getClientOrdersByStatus($userId);
         $totalAmountSpent = $this->getClientTotalAmountSpent($userId);
-        $ordersHistory = $this->getClientOrdersHistory($userId);
 
         return [
             'userRole' => 'client',
@@ -98,14 +97,13 @@ class DashboardRepository {
             'mostOrderedProducts' => $mostOrderedProducts,
             'ordersByStatus' => $ordersByStatus,
             'totalAmountSpent' => $totalAmountSpent,
-            'ordersHistory' => $ordersHistory,
         ];
     }
 
     /**
      * Récupère les données pour un commercial.
      * 
-     * Retourne les KPI, top clients, top produits, évolution CA et commandes en attente.
+     * Retourne les KPI, top clients, top produits et évolution CA.
      *
      * @param int $salesmanId ID du commercial.
      * @return array Données du commercial.
@@ -121,9 +119,6 @@ class DashboardRepository {
         
         // Données pour graphiques
         $revenueEvolution = $this->getRevenueEvolution($salesmanId);
-        
-        // Commandes en attente
-        $pendingOrders = $this->getPendingOrders($salesmanId);
         
         // Données existantes (conservées pour compatibilité)
         $bestClient = $this->getBestClient($salesmanId);
@@ -143,8 +138,6 @@ class DashboardRepository {
             'topProducts' => $topProducts,
             // Graphiques
             'revenueEvolutionData' => $revenueEvolution,
-            // Opérationnel
-            'pendingOrders' => $pendingOrders,
             // Données existantes (pour compatibilité)
             'bestClient' => $bestClient,
             'bestProduct' => $bestProduct,
@@ -169,7 +162,6 @@ class DashboardRepository {
         $lowStockProducts = $this->getLowStockProducts();
         $totalStockValue = $this->getTotalStockValue();
         $stockRotation = $this->getStockRotation();
-        $stockMovements = $this->getStockMovements();
 
         return [
             'userRole' => 'logisticien',
@@ -181,7 +173,6 @@ class DashboardRepository {
             'lowStockProducts' => $lowStockProducts,
             'totalStockValue' => $totalStockValue,
             'stockRotation' => $stockRotation,
-            'stockMovements' => $stockMovements,
         ];
     }
 
@@ -307,43 +298,6 @@ class DashboardRepository {
             return round((float)($result['total_amount'] ?? 0), 2);
         } catch (PDOException $e) {
             return 0.0;
-        }
-    }
-
-    /**
-     * Récupère l'historique des commandes d'un client.
-     * 
-     * Récupère les dernières commandes avec leurs détails (statut, date, montant).
-     * Limité aux 10 dernières commandes pour l'affichage.
-     *
-     * @param int $userId ID de l'utilisateur client.
-     * @return array Liste des commandes avec leurs informations.
-     */
-    private function getClientOrdersHistory(int $userId): array {
-        try {
-            $query = "SELECT 
-                        c.command_id,
-                        c.created_at,
-                        c.delivery_date,
-                        c.fk_status_id,
-                        s.status_name,
-                        COALESCE(SUM(st.price), 0) as total_amount,
-                        COUNT(cd.details_id) as products_count
-                      FROM commands c
-                      LEFT JOIN status s ON c.fk_status_id = s.status_id
-                      LEFT JOIN command_details cd ON c.command_id = cd.fk_command_id
-                      LEFT JOIN stock st ON cd.fk_product_id = st.product_id
-                      WHERE c.fk_user_id = :userId
-                      GROUP BY c.command_id, c.created_at, c.delivery_date, c.fk_status_id, s.status_name
-                      ORDER BY c.created_at DESC
-                      LIMIT 10";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (PDOException $e) {
-            return [];
         }
     }
 
@@ -659,38 +613,6 @@ class DashboardRepository {
     }
 
     /**
-     * Récupère la liste des commandes en attente de validation.
-     * 
-     * Les commandes en attente sont celles avec le statut "en attente" (status_id = 3).
-     *
-     * @param int $salesmanId ID du commercial.
-     * @return array Liste des commandes en attente avec leurs informations.
-     */
-    private function getPendingOrders(int $salesmanId): array {
-        try {
-            $query = "SELECT 
-                        cm.command_id,
-                        cm.created_at,
-                        cm.delivery_date,
-                        c.company_name,
-                        u.firstname,
-                        u.lastname
-                      FROM commands cm
-                      INNER JOIN users u ON cm.fk_user_id = u.user_id
-                      INNER JOIN companies c ON u.fk_company_id = c.company_id
-                      WHERE c.fk_salesman_id = :salesmanId
-                      AND cm.fk_status_id = 3
-                      ORDER BY cm.created_at ASC";
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (PDOException $e) {
-            return [];
-        }
-    }
-
-    /**
      * Récupère le nombre de commandes par statut.
      * 
      * Compte les commandes selon leur statut : à préparer (validé=1), envoyées (envoyé=2), livrées (envoyé=2, considérées comme livrées).
@@ -823,41 +745,6 @@ class DashboardRepository {
                       GROUP BY s.product_id, s.product_name, s.quantity
                       ORDER BY exit_count DESC
                       LIMIT 5";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (PDOException $e) {
-            return [];
-        }
-    }
-
-    /**
-     * Récupère l'historique des mouvements de stock (sorties).
-     * 
-     * Récupère les dernières sorties de stock via command_details pour les 30 derniers jours.
-     * Limité aux 20 dernières sorties pour l'affichage.
-     *
-     * @return array Liste des mouvements de stock.
-     */
-    private function getStockMovements(): array {
-        try {
-            $query = "SELECT 
-                        cd.details_id,
-                        cd.fk_command_id,
-                        cd.fk_product_id,
-                        cd.created_at,
-                        s.product_name,
-                        c.command_id,
-                        c.delivery_date,
-                        st.status_name
-                      FROM command_details cd
-                      INNER JOIN stock s ON cd.fk_product_id = s.product_id
-                      INNER JOIN commands c ON cd.fk_command_id = c.command_id
-                      LEFT JOIN status st ON c.fk_status_id = st.status_id
-                      WHERE cd.created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-                      ORDER BY cd.created_at DESC
-                      LIMIT 20";
             
             $stmt = $this->conn->prepare($query);
             $stmt->execute();

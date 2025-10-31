@@ -123,13 +123,17 @@ class Router {
     public function getRoute(?string $route = null): void {
         // Utilise l'URI de la requête si aucune route n'est fournie
         if (!$route) {
-            $route = $_SERVER['REQUEST_URI'] ?? '/';
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
+            // Extrait le chemin sans les paramètres de requête pour le routage
+            $route = parse_url($requestUri, PHP_URL_PATH) ?? '/';
+        } else {
+            // Si une route est fournie, extrait aussi le chemin (au cas où elle contiendrait des query params)
+            $route = parse_url($route, PHP_URL_PATH) ?? '/';
         }
 
-        // Si la route fournie diffère de l'URI actuel, redirige vers l'URL complète
-        // Cela permet de gérer les appels externes au router avec redirection propre
-        if ($route !== $_SERVER['REQUEST_URI']) {
-            $this->redirect($route, 302);
+        // Normalise la route (s'assure qu'elle commence par /)
+        if ($route === '' || $route[0] !== '/') {
+            $route = '/' . $route;
         }
 
         // Démarre la session si elle n'est pas déjà active

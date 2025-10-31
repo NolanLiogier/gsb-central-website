@@ -53,7 +53,7 @@ class CompaniesRepository {
             // Préfixe "selected_" pour distinguer les valeurs courantes des options du formulaire
             // Permet de présélectionner le bon secteur et commercial dans les listes déroulantes
             // Utilisation de LEFT JOIN pour le commercial car il peut être null
-            $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, 
+            $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, c.delivery_address,
                              s.sector_id as selected_sector_id, s.sector_name as selected_sector_name,
                              u.user_id as selected_salesman_id, u.firstname as selected_salesman_firstname, u.lastname as selected_salesman_lastname
                       FROM companies c 
@@ -97,7 +97,7 @@ class CompaniesRepository {
             // Filtrage des entreprises par le commercial assigné
             // INNER JOIN sur sectors car une entreprise doit avoir un secteur
             // WHERE c.fk_salesman_id = :salesman_id pour filtrer par commercial
-            $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, s.sector_name, 
+            $query = "SELECT c.company_id, c.company_name, c.siret, c.siren, c.delivery_address, s.sector_name, 
                              u.user_id, u.firstname, u.lastname
                       FROM companies c 
                       INNER JOIN sectors s ON c.fk_sector_id = s.sector_id 
@@ -197,7 +197,7 @@ class CompaniesRepository {
      * des champs requis, et met à jour toutes les informations de l'entreprise. Le commercial
      * est optionnel et peut être null pour ne pas assigner de commercial.
      *
-     * @param array $companyData Données de l'entreprise à mettre à jour (company_id, company_name, siret, siren, sector, salesman).
+     * @param array $companyData Données de l'entreprise à mettre à jour (company_id, company_name, siret, siren, delivery_address, sector, salesman).
      * @return bool True si la mise à jour a réussi, false en cas d'erreur ou de données invalides.
      */
     public function updateCompany(array $companyData): bool {
@@ -234,6 +234,7 @@ class CompaniesRepository {
                           SET company_name = :company_name, 
                               siret = :siret, 
                               siren = :siren, 
+                              delivery_address = :delivery_address,
                               fk_sector_id = :sector_id, 
                               fk_salesman_id = :salesman_id
                           WHERE company_id = :company_id";
@@ -242,6 +243,7 @@ class CompaniesRepository {
                           SET company_name = :company_name, 
                               siret = :siret, 
                               siren = :siren, 
+                              delivery_address = :delivery_address,
                               fk_sector_id = :sector_id
                           WHERE company_id = :company_id";
             }
@@ -253,6 +255,9 @@ class CompaniesRepository {
             $stmt->bindParam(':company_name', $companyData['company_name'], PDO::PARAM_STR);
             $stmt->bindParam(':siret', $companyData['siret'], PDO::PARAM_STR);
             $stmt->bindParam(':siren', $companyData['siren'], PDO::PARAM_STR);
+            // Gestion de l'adresse de livraison : valeur nullable (peut être vide)
+            $deliveryAddress = !empty($companyData['delivery_address']) ? trim($companyData['delivery_address']) : null;
+            $stmt->bindParam(':delivery_address', $deliveryAddress, PDO::PARAM_STR);
             $stmt->bindParam(':sector_id', $companyData['sector'], PDO::PARAM_INT);
             
             // Bind du commercial seulement s'il est présent dans les données (pas pour les clients)
@@ -277,7 +282,7 @@ class CompaniesRepository {
      * des champs requis, et insère une nouvelle entrée dans la table companies.
      * Le commercial est optionnel et peut être null pour ne pas assigner de commercial.
      *
-     * @param array $companyData Données de l'entreprise à créer (company_name, siret, siren, sector, salesman).
+     * @param array $companyData Données de l'entreprise à créer (company_name, siret, siren, delivery_address, sector, salesman).
      * @return bool True si l'insertion a réussi, false en cas d'erreur ou de données invalides.
      */
     public function addCompany(array $companyData): bool {
@@ -305,18 +310,21 @@ class CompaniesRepository {
             }
 
             // Préparation de la requête INSERT avec paramètres nommés pour éviter les injections SQL
-            $query = "INSERT INTO companies (company_name, siret, siren, fk_sector_id, fk_salesman_id) 
-                      VALUES (:company_name, :siret, :siren, :sector_id, :salesman_id)";
+            $query = "INSERT INTO companies (company_name, siret, siren, delivery_address, fk_sector_id, fk_salesman_id) 
+                      VALUES (:company_name, :siret, :siren, :delivery_address, :sector_id, :salesman_id)";
             
             $stmt = $this->connection->prepare($query);
             
             // Gestion du commercial : valeur nullable (peut être null si non assigné)
             $salesmanId = !empty($companyData['salesman']) ? $companyData['salesman'] : null;
+            // Gestion de l'adresse de livraison : valeur nullable (peut être vide)
+            $deliveryAddress = !empty($companyData['delivery_address']) ? trim($companyData['delivery_address']) : null;
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':company_name', $companyData['company_name'], PDO::PARAM_STR);
             $stmt->bindParam(':siret', $companyData['siret'], PDO::PARAM_STR);
             $stmt->bindParam(':siren', $companyData['siren'], PDO::PARAM_STR);
+            $stmt->bindParam(':delivery_address', $deliveryAddress, PDO::PARAM_STR);
             $stmt->bindParam(':sector_id', $companyData['sector'], PDO::PARAM_INT);
             $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
             

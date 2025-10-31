@@ -64,7 +64,6 @@ class DashboardTemplate {
         $chartLabels = $formattedData['chartLabels'];
         $ordersByStatus = $formattedData['ordersByStatus'];
         $totalAmountFormatted = $formattedData['totalAmountFormatted'];
-        $ordersHistory = $formattedData['ordersHistory'];
         
         $ordersInProgress = $ordersByStatus['inProgress'] ?? 0;
         $ordersShipped = $ordersByStatus['shipped'] ?? 0;
@@ -132,12 +131,6 @@ class DashboardTemplate {
                         </div>
                     </div>
                 </div>
-
-                <!-- Historique des commandes -->
-                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-cyan-500">
-                    <h2 class="text-xl font-semibold text-gray-700 mb-4">Historique de vos commandes</h2>
-                    {$this->renderClientOrdersHistoryTable($ordersHistory)}
-                </div>
             </div>
 
             <script src="/public/assets/js/dashboard.js"></script>
@@ -178,80 +171,6 @@ class DashboardTemplate {
     }
 
     /**
-     * Génère le tableau HTML pour l'historique des commandes client.
-     *
-     * @param array $orders Liste des commandes.
-     * @return string HTML du tableau.
-     */
-    private function renderClientOrdersHistoryTable(array $orders): string {
-        if (empty($orders)) {
-            return '<p class="text-gray-500 text-center py-4">Aucune commande passée</p>';
-        }
-
-        $rows = '';
-        foreach ($orders as $index => $order) {
-            $commandId = (int)($order['command_id'] ?? 0);
-            $createdAt = htmlspecialchars($order['created_at'] ?? '');
-            $deliveryDate = htmlspecialchars($order['delivery_date'] ?? '');
-            $statusName = htmlspecialchars($order['status_name'] ?? 'N/A');
-            $totalAmountFormatted = htmlspecialchars($order['total_amount_formatted'] ?? '0,00 €');
-            $productsCount = (int)($order['products_count'] ?? 0);
-            
-            $dateFormatted = $this->dashboardService->formatDate($createdAt, true);
-            $deliveryDateFormatted = $this->dashboardService->formatDate($deliveryDate, false);
-            $rowBgClass = $index % 2 === 0 ? 'bg-white' : 'bg-cyan-50';
-            
-            // Couleur selon le statut
-            $statusClass = 'bg-blue-100 text-blue-800';
-            $statusId = (int)($order['fk_status_id'] ?? 0);
-            if ($statusId === 3) {
-                $statusClass = 'bg-yellow-100 text-yellow-800'; // En attente
-            } elseif ($statusId === 1) {
-                $statusClass = 'bg-orange-100 text-orange-800'; // Validé
-            } elseif ($statusId === 2) {
-                $statusClass = 'bg-green-100 text-green-800'; // Envoyé/Livré
-            }
-            
-            $rows .= <<<HTML
-                <tr class="border-b border-gray-200 hover:bg-cyan-100 {$rowBgClass} transition-colors">
-                    <td class="py-3 px-4 text-gray-800 font-medium">#{$commandId}</td>
-                    <td class="py-3 px-4 text-gray-600">{$dateFormatted}</td>
-                    <td class="py-3 px-4 text-gray-600">{$deliveryDateFormatted}</td>
-                    <td class="py-3 px-4 text-gray-600">{$productsCount} produit(s)</td>
-                    <td class="py-3 px-4 text-green-600 font-semibold">{$totalAmountFormatted}</td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full {$statusClass}">{$statusName}</span>
-                    </td>
-                    <td class="py-3 px-4">
-                        <a href="/Commands" class="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline">Voir</a>
-                    </td>
-                </tr>
-            HTML;
-        }
-
-        return <<<HTML
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="border-b border-gray-300">
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Date commande</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Date livraison</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Produits</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Montant</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Statut</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {$rows}
-                    </tbody>
-                </table>
-            </div>
-        HTML;
-    }
-
-    /**
      * Génère le contenu HTML du tableau de bord pour un commercial.
      *
      * @param array $datas Données du commercial.
@@ -271,7 +190,6 @@ class DashboardTemplate {
         $objective = $formattedData['objective'];
         $topClients = $formattedData['topClients'];
         $topProducts = $formattedData['topProducts'];
-        $pendingOrders = $formattedData['pendingOrders'];
         
         $currentObjective = $objective['current'];
         $objectiveTotal = $objective['total'];
@@ -341,12 +259,6 @@ class DashboardTemplate {
                         <h2 class="text-xl font-semibold text-gray-800 mb-4">Top 5 produits les plus vendus</h2>
                         {$this->renderTopProductsTable($topProducts)}
                     </div>
-                </div>
-
-                <!-- Commandes en attente -->
-                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Commandes en attente de validation</h2>
-                    {$this->renderPendingOrdersTable($pendingOrders)}
                 </div>
             </div>
 
@@ -447,66 +359,6 @@ class DashboardTemplate {
     }
 
     /**
-     * Génère le tableau HTML pour les commandes en attente.
-     *
-     * @param array $orders Liste des commandes.
-     * @return string HTML du tableau.
-     */
-    private function renderPendingOrdersTable(array $orders): string {
-        if (empty($orders)) {
-            return '<p class="text-gray-500 text-center py-4">Aucune commande en attente de validation</p>';
-        }
-
-        $rows = '';
-        foreach ($orders as $index => $order) {
-            $commandId = (int)($order['command_id'] ?? 0);
-            $companyName = htmlspecialchars($order['company_name'] ?? 'N/A');
-            $firstName = htmlspecialchars($order['firstname'] ?? '');
-            $lastName = htmlspecialchars($order['lastname'] ?? '');
-            $createdAt = htmlspecialchars($order['created_at'] ?? '');
-            $deliveryDate = htmlspecialchars($order['delivery_date'] ?? '');
-            
-            // Formatage des dates
-            $createdDate = $this->dashboardService->formatDate($createdAt, true);
-            $deliveryDateFormatted = $this->dashboardService->formatDate($deliveryDate, false);
-            $rowBgClass = $index % 2 === 0 ? 'bg-white' : 'bg-yellow-50';
-            
-            $rows .= <<<HTML
-                <tr class="border-b border-gray-200 hover:bg-yellow-100 {$rowBgClass} transition-colors">
-                    <td class="py-3 px-4 text-gray-800 font-medium">#{$commandId}</td>
-                    <td class="py-3 px-4 text-gray-600">{$companyName}</td>
-                    <td class="py-3 px-4 text-gray-600">{$firstName} {$lastName}</td>
-                    <td class="py-3 px-4 text-gray-600">{$createdDate}</td>
-                    <td class="py-3 px-4 text-gray-600">{$deliveryDateFormatted}</td>
-                    <td class="py-3 px-4">
-                        <a href="/Commands" class="text-blue-600 hover:text-blue-800 text-sm font-medium hover:underline">Voir la commande</a>
-                    </td>
-                </tr>
-            HTML;
-        }
-
-        return <<<HTML
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="border-b border-gray-300">
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">ID</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Entreprise</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Client</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Date création</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Date livraison</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {$rows}
-                    </tbody>
-                </table>
-            </div>
-        HTML;
-    }
-
-    /**
      * Génère le contenu HTML du tableau de bord pour un logisticien.
      *
      * @param array $datas Données du logisticien.
@@ -522,7 +374,6 @@ class DashboardTemplate {
         $totalStockValueFormatted = $formattedData['totalStockValueFormatted'];
         $lowStockProducts = $formattedData['lowStockProducts'];
         $stockRotation = $formattedData['stockRotation'];
-        $stockMovements = $formattedData['stockMovements'];
         $rotationLabelsJson = $formattedData['rotationLabelsJson'];
         $rotationCountsJson = $formattedData['rotationCountsJson'];
 
@@ -597,12 +448,6 @@ class DashboardTemplate {
                             data-labels='{$rotationLabelsJson}' 
                             data-values='{$rotationCountsJson}'
                             style="max-height: 300px;"></canvas>
-                </div>
-
-                <!-- Historique des mouvements de stock -->
-                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Historique des mouvements (30 derniers jours)</h2>
-                    {$this->renderStockMovementsTable($stockMovements)}
                 </div>
             </div>
 
@@ -694,62 +539,6 @@ class DashboardTemplate {
                             <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Produit</th>
                             <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Sorties</th>
                             <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Stock actuel</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {$rows}
-                    </tbody>
-                </table>
-            </div>
-        HTML;
-    }
-
-    /**
-     * Génère le tableau HTML pour les mouvements de stock.
-     *
-     * @param array $movements Liste des mouvements.
-     * @return string HTML du tableau.
-     */
-    private function renderStockMovementsTable(array $movements): string {
-        if (empty($movements)) {
-            return '<p class="text-gray-500 text-center py-4">Aucun mouvement de stock récent</p>';
-        }
-
-        $rows = '';
-        foreach ($movements as $index => $movement) {
-            $productName = htmlspecialchars($movement['product_name'] ?? 'N/A');
-            $commandId = (int)($movement['command_id'] ?? 0);
-            $createdAt = htmlspecialchars($movement['created_at'] ?? '');
-            $statusName = htmlspecialchars($movement['status_name'] ?? '');
-            $deliveryDate = htmlspecialchars($movement['delivery_date'] ?? '');
-            
-            $dateFormatted = $this->dashboardService->formatDate($createdAt, true);
-            $deliveryDateFormatted = $this->dashboardService->formatDate($deliveryDate, false);
-            $rowBgClass = $index % 2 === 0 ? 'bg-white' : 'bg-yellow-50';
-            
-            $rows .= <<<HTML
-                <tr class="border-b border-gray-200 hover:bg-yellow-100 {$rowBgClass} transition-colors">
-                    <td class="py-3 px-4 text-gray-800 font-medium">{$productName}</td>
-                    <td class="py-3 px-4 text-gray-600">Commande #{$commandId}</td>
-                    <td class="py-3 px-4 text-gray-600">{$dateFormatted}</td>
-                    <td class="py-3 px-4 text-gray-600">{$deliveryDateFormatted}</td>
-                    <td class="py-3 px-4">
-                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">{$statusName}</span>
-                    </td>
-                </tr>
-            HTML;
-        }
-
-        return <<<HTML
-            <div class="overflow-x-auto">
-                <table class="min-w-full">
-                    <thead>
-                        <tr class="border-b border-gray-300">
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Produit</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Commande</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Date mouvement</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Date livraison</th>
-                            <th class="py-2 px-4 text-left text-sm font-semibold text-gray-700">Statut</th>
                         </tr>
                     </thead>
                     <tbody>

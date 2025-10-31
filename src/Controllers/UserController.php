@@ -148,20 +148,33 @@ class UserController
         $_SESSION = array();
         
         // Destruction du cookie de session si il existe
+        // Utilisation de setcookie() qui est plus simple et évite les problèmes de headers trop volumineux
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000,
-                $params["path"], $params["domain"],
-                $params["secure"], $params["httponly"]
+            $cookieName = session_name();
+            $expire = time() - 42000;
+            
+            // Utilisation de setcookie() pour supprimer le cookie de session
+            // PHP 7.3+ gère nativement SameSite avec setcookie()
+            setcookie(
+                $cookieName,
+                '',
+                [
+                    'expires' => $expire,
+                    'path' => $params["path"],
+                    'domain' => $params["domain"],
+                    'secure' => $params["secure"],
+                    'httponly' => $params["httponly"],
+                    'samesite' => $params["samesite"] ?? 'Strict'
+                ]
             );
         }
         
         // Destruction de la session
         session_destroy();
         
-        // Redirection vers la page de connexion
-        $this->router->getRoute('/Login');
-        exit;
+        // Redirection vers la page de connexion avec redirect() pour éviter de démarrer une nouvelle session
+        $this->router->redirect('/Login', 302);
     }
 
 }

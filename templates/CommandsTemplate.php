@@ -2,6 +2,8 @@
 
 namespace Templates;
 
+use Templates\widgets\TableWidget;
+
 /**
  * Classe CommandsTemplate
  * 
@@ -33,54 +35,29 @@ HTML;
         
         $commandContent .= <<<HTML
         </div>
-
-        <!-- Tableau des commandes -->
-        <div class="bg-white shadow-sm rounded-lg overflow-hidden">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                    <tr>
 HTML;
 
-        // Affichage des colonnes selon le rôle
-        $commandContent .= $this->generateTableHeaders($userFunctionId);
-        
-        $commandContent .= <<<HTML
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            DATE DE LIVRAISON
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            DATE DE CRÉATION
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            STATUT
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            ACTIONS
-                        </th>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-        HTML;
-
         // Récupération sécurisée de la liste des commandes
-        $commands = $this->extractCommands($datas);
+        $allCommands = $this->extractCommands($datas);
         
-        // Calcul du nombre de colonnes pour le colspan
-        $colspan = $this->calculateColspan($userFunctionId);
+        // Génération des en-têtes selon le rôle
+        $headers = $this->buildHeaders($userFunctionId);
         
-        // Vérification si la liste des commandes est vide
-        if (empty($commands)) {
-            $commandContent .= $this->generateEmptyState($colspan);
-        } else {
-            // Génération dynamique des lignes du tableau pour chaque commande
-            $commandContent .= $this->generateCommandRows($commands, $userFunctionId);
-        }
-
-        $commandContent .= <<<HTML
-                </tbody>
-            </table>
-        </div>
-
-        HTML;
+        // Utilisation du TableWidget pour générer le tableau
+        $tableWidget = new TableWidget();
+        $tableHtml = $tableWidget->render([
+            'headers' => $headers,
+            'rows' => $allCommands,
+            'itemsPerPage' => 10,
+            'baseUrl' => '/Commands',
+            'emptyMessage' => 'Aucune commande',
+            'emptyIcon' => 'fa-shopping-cart',
+            'rowCallback' => function($command) use ($userFunctionId) {
+                return $this->generateCommandRow($command, $userFunctionId);
+            }
+        ]);
+        
+        $commandContent .= $tableHtml;
 
         return $commandContent;
     }
@@ -240,29 +217,29 @@ HTML;
     }
 
     /**
-     * Génère les en-têtes du tableau selon le rôle de l'utilisateur.
+     * Construit les en-têtes du tableau selon le rôle de l'utilisateur.
      * 
      * Affiche les colonnes Client et Entreprise uniquement pour les commerciaux
      * et logisticiens (roles 1 et 3).
      *
      * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
-     * @return string HTML des en-têtes de colonnes générés.
+     * @return array Tableau des en-têtes pour le TableWidget.
      */
-    private function generateTableHeaders(?int $userFunctionId): string
+    private function buildHeaders(?int $userFunctionId): array
     {
-        $headers = '';
+        $headers = [];
         
         // Commercial ou Logisticien : affichage des colonnes Client et Entreprise
         if ($userFunctionId == 1 || $userFunctionId == 3) {
-            $headers .= <<<HTML
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            CLIENT
-                        </th>
-                        <th class="px-6 py-3 text-left text-xs font-medium text-blue-600 uppercase tracking-wider">
-                            ENTREPRISE
-                        </th>
-HTML;
+            $headers[] = 'CLIENT';
+            $headers[] = 'ENTREPRISE';
         }
+        
+        // Colonnes communes
+        $headers[] = 'DATE DE LIVRAISON';
+        $headers[] = 'DATE DE CRÉATION';
+        $headers[] = 'STATUT';
+        $headers[] = 'ACTIONS';
         
         return $headers;
     }
@@ -293,100 +270,49 @@ HTML;
     }
 
     /**
-     * Calcule le nombre de colonnes pour le colspan.
-     * 
-     * Détermine le nombre total de colonnes selon le rôle :
-     * - Base : Date livraison, Date création, Statut, Actions (4 colonnes)
-     * - Commercial/Logisticien : ajoute Client et Entreprise (2 colonnes supplémentaires)
-     *
-     * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
-     * @return int Nombre de colonnes total.
-     */
-    private function calculateColspan(?int $userFunctionId): int
-    {
-        $colspan = 4; // Date livraison, Date création, Statut, Actions
-        
-        if ($userFunctionId == 1 || $userFunctionId == 3) {
-            $colspan += 2; // Client, Entreprise
-        }
-        
-        return $colspan;
-    }
-
-    /**
-     * Génère le message d'état vide lorsqu'il n'y a aucune commande.
-     * 
-     * Crée une ligne de tableau avec un message informatif centré.
-     *
-     * @param int $colspan Nombre de colonnes à fusionner.
-     * @return string HTML de l'état vide généré.
-     */
-    private function generateEmptyState(int $colspan): string
-    {
-        $colspanEscaped = htmlspecialchars($colspan);
-        
-        return <<<HTML
-                    <tr>
-                        <td colspan="{$colspanEscaped}" class="px-6 py-12 text-center">
-                            <div class="text-gray-500">
-                                <i class="fas fa-shopping-cart text-4xl mb-4"></i>
-                                <p class="text-lg font-medium">Aucune commande</p>
-                                <p class="text-sm mt-2">Vous n'avez aucune commande pour le moment.</p>
-                            </div>
-                        </td>
-                    </tr>
-HTML;
-    }
-
-    /**
-     * Génère les lignes du tableau pour chaque commande.
+     * Génère une ligne du tableau pour une commande.
      * 
      * Crée une ligne de tableau avec toutes les informations de la commande :
      * client, entreprise (si applicable), dates, statut et actions.
      *
-     * @param array $commands Liste des commandes à afficher.
+     * @param array $command Données de la commande.
      * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
-     * @return string HTML des lignes de commandes générées.
+     * @return string HTML de la ligne de commande générée.
      */
-    private function generateCommandRows(array $commands, ?int $userFunctionId): string
+    private function generateCommandRow(array $command, ?int $userFunctionId): string
     {
-        $html = '';
+        // Échappement XSS de toutes les valeurs pour éviter les injections
+        $commandId = htmlspecialchars($command['command_id'] ?? '0');
+        $deliveryDate = isset($command['delivery_date']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['delivery_date']))) : '-';
+        $createdAt = isset($command['created_at']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['created_at']))) : '-';
+        $statusName = htmlspecialchars($command['status_name'] ?? '-');
         
-        foreach ($commands as $command) {
-            // Échappement XSS de toutes les valeurs pour éviter les injections
-            $commandId = htmlspecialchars($command['command_id'] ?? '0');
-            $deliveryDate = isset($command['delivery_date']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['delivery_date']))) : '-';
-            $createdAt = isset($command['created_at']) ? htmlspecialchars(date('d/m/Y H:i', strtotime($command['created_at']))) : '-';
-            $statusName = htmlspecialchars($command['status_name'] ?? '-');
-            
-            // Récupérer le status_id avec gestion appropriée du type
-            $statusId = isset($command['fk_status_id']) ? (int)$command['fk_status_id'] : null;
-            // En cas d'absence, utiliser status_id depuis la requête si disponible
-            if ($statusId === null && isset($command['status_id'])) {
-                $statusId = (int)$command['status_id'];
-            }
-            
-            // Informations client et entreprise pour commerciaux et logisticiens
-            $clientName = '';
-            $companyName = '';
-            if ($userFunctionId == 1 || $userFunctionId == 3) {
-                $clientName = htmlspecialchars(($command['firstname'] ?? '') . ' ' . ($command['lastname'] ?? ''));
-                $companyName = htmlspecialchars($command['company_name'] ?? '-');
-            }
-            
-            // Génération des actions selon le rôle et le statut
-            $actionsHtml = '';
-            if ($statusId !== null) {
-                $actionsHtml = $this->generateActionButtons((int)$commandId, (int)$statusId, (int)$userFunctionId);
-            }
-            
+        // Récupérer le status_id avec gestion appropriée du type
+        $statusId = isset($command['fk_status_id']) ? (int)$command['fk_status_id'] : null;
+        // En cas d'absence, utiliser status_id depuis la requête si disponible
+        if ($statusId === null && isset($command['status_id'])) {
+            $statusId = (int)$command['status_id'];
+        }
+        
+        // Informations client et entreprise pour commerciaux et logisticiens
+        $clientName = '';
+        $companyName = '';
+        if ($userFunctionId == 1 || $userFunctionId == 3) {
+            $clientName = htmlspecialchars(($command['firstname'] ?? '') . ' ' . ($command['lastname'] ?? ''));
+            $companyName = htmlspecialchars($command['company_name'] ?? '-');
+        }
+        
+        // Génération des actions selon le rôle et le statut
+        $actionsHtml = '';
+        if ($statusId !== null) {
+            $actionsHtml = $this->generateActionButtons((int)$commandId, (int)$statusId, (int)$userFunctionId);
+        }
+        
+        $html = '<tr class="hover:bg-gray-50 transition-colors">';
+        
+        // Colonnes selon le rôle
+        if ($userFunctionId == 1 || $userFunctionId == 3) {
             $html .= <<<HTML
-                    <tr class="hover:bg-gray-50 transition-colors">
-HTML;
-            
-            // Colonnes selon le rôle
-            if ($userFunctionId == 1 || $userFunctionId == 3) {
-                $html .= <<<HTML
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{$clientName}</div>
                         </td>
@@ -394,9 +320,9 @@ HTML;
                             <div class="text-sm text-gray-900">{$companyName}</div>
                         </td>
 HTML;
-            }
-            
-            $html .= <<<HTML
+        }
+        
+        $html .= <<<HTML
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="text-sm text-gray-900">{$deliveryDate}</div>
                         </td>
@@ -411,7 +337,6 @@ HTML;
                         </td>
                     </tr>
 HTML;
-        }
         
         return $html;
     }

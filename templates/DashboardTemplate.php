@@ -75,7 +75,7 @@ class DashboardTemplate {
                 <h1 class="text-3xl font-bold text-gray-800 mb-6">Tableau de bord</h1>
                 
                 <!-- KPI Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Total de commandes -->
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                         <div class="flex items-center justify-between">
@@ -92,26 +92,6 @@ class DashboardTemplate {
                             <div class="flex-1">
                                 <p class="text-sm text-gray-500 mb-1">Montant total dépensé</p>
                                 <p class="text-3xl font-bold text-green-600">{$totalAmountFormatted}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Commandes en cours -->
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <p class="text-sm text-gray-500 mb-1">Commandes en cours</p>
-                                <p class="text-3xl font-bold text-orange-600">{$ordersInProgress}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Commandes livrées -->
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-purple-500">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <p class="text-sm text-gray-500 mb-1">Commandes livrées</p>
-                                <p class="text-3xl font-bold text-purple-600">{$ordersDelivered}</p>
                             </div>
                         </div>
                     </div>
@@ -537,20 +517,12 @@ class DashboardTemplate {
         
         $ordersToPrepare = $formattedData['ordersToPrepare'];
         $ordersShipped = $formattedData['ordersShipped'];
-        $ordersDelivered = $formattedData['ordersDelivered'];
-        $onTimeShippingRate = $formattedData['onTimeShippingRate'];
-        $onTimeShippingCount = $formattedData['onTimeShippingCount'];
-        $totalShipped = $formattedData['totalShipped'];
         $averageProcessingTime = $formattedData['processingTimeFormatted'];
-        $shippingEvolutionClass = $formattedData['shippingEvolutionClass'];
-        $shippingEvolutionIcon = $formattedData['shippingEvolutionIcon'];
-        $shippingEvolutionBgClass = $formattedData['shippingEvolutionBgClass'];
         
         $totalStockValueFormatted = $formattedData['totalStockValueFormatted'];
         $lowStockProducts = $formattedData['lowStockProducts'];
         $stockRotation = $formattedData['stockRotation'];
         $stockMovements = $formattedData['stockMovements'];
-        $reorderAlerts = $formattedData['reorderAlerts'];
         $rotationLabelsJson = $formattedData['rotationLabelsJson'];
         $rotationCountsJson = $formattedData['rotationCountsJson'];
 
@@ -559,7 +531,7 @@ class DashboardTemplate {
                 <h1 class="text-3xl font-bold text-gray-800 mb-6">Tableau de bord logistique</h1>
                 
                 <!-- KPI Cards - Commandes -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Commandes à préparer -->
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-orange-500">
                         <div class="flex items-center justify-between">
@@ -576,29 +548,6 @@ class DashboardTemplate {
                             <div class="flex-1">
                                 <p class="text-sm text-gray-500 mb-1">Expédiées</p>
                                 <p class="text-3xl font-bold text-blue-600">{$ordersShipped}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Commandes livrées -->
-                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-green-500">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <p class="text-sm text-gray-500 mb-1">Livrées</p>
-                                <p class="text-3xl font-bold text-green-600">{$ordersDelivered}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Taux d'expédition à temps -->
-                    <div class="bg-white rounded-lg shadow p-6 {$shippingEvolutionBgClass}">
-                        <div class="flex items-center justify-between">
-                            <div class="flex-1">
-                                <p class="text-sm text-gray-500 mb-1">Expédiées à temps</p>
-                                <p class="text-3xl font-bold text-gray-800">{$onTimeShippingRate}%</p>
-                                <p class="text-sm mt-1 font-medium {$shippingEvolutionClass}">
-                                    <span>{$shippingEvolutionIcon}</span> {$onTimeShippingCount}/{$totalShipped} commandes
-                                </p>
                             </div>
                         </div>
                     </div>
@@ -654,12 +603,6 @@ class DashboardTemplate {
                 <div class="bg-white rounded-lg shadow p-6 border-l-4 border-yellow-500">
                     <h2 class="text-xl font-semibold text-gray-800 mb-4">Historique des mouvements (30 derniers jours)</h2>
                     {$this->renderStockMovementsTable($stockMovements)}
-                </div>
-
-                <!-- Alertes de réapprovisionnement -->
-                <div class="bg-white rounded-lg shadow p-6 border-l-4 border-red-600">
-                    <h2 class="text-xl font-semibold text-gray-800 mb-4">Alertes de réapprovisionnement</h2>
-                    {$this->renderReorderAlertsTable($reorderAlerts)}
                 </div>
             </div>
 

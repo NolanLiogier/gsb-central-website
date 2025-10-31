@@ -155,15 +155,14 @@ class DashboardRepository {
     /**
      * Récupère les données pour un logisticien.
      * 
-     * Retourne les KPI logistiques : commandes par statut, performance expédition,
-     * stocks, rotation et alertes.
+     * Retourne les KPI logistiques : commandes par statut, temps de traitement,
+     * stocks, rotation et mouvements.
      *
      * @return array Données du logisticien.
      */
     private function getLogisticianDatas(): array {
         // KPI commandes
         $ordersByStatus = $this->getOrdersByStatus();
-        $shippingPerformance = $this->getShippingPerformance();
         $averageProcessingTime = $this->getAverageProcessingTime();
         
         // KPI stocks
@@ -171,24 +170,18 @@ class DashboardRepository {
         $totalStockValue = $this->getTotalStockValue();
         $stockRotation = $this->getStockRotation();
         $stockMovements = $this->getStockMovements();
-        $reorderAlerts = $this->getReorderAlerts();
 
         return [
             'userRole' => 'logisticien',
             // Commandes
             'ordersToPrepare' => $ordersByStatus['toPrepare'],
             'ordersShipped' => $ordersByStatus['shipped'],
-            'ordersDelivered' => $ordersByStatus['delivered'],
-            'onTimeShippingRate' => $shippingPerformance['onTimeRate'],
-            'onTimeShippingCount' => $shippingPerformance['onTimeCount'],
-            'totalShipped' => $shippingPerformance['totalShipped'],
             'averageProcessingTime' => $averageProcessingTime,
             // Stocks
             'lowStockProducts' => $lowStockProducts,
             'totalStockValue' => $totalStockValue,
             'stockRotation' => $stockRotation,
             'stockMovements' => $stockMovements,
-            'reorderAlerts' => $reorderAlerts,
         ];
     }
 
@@ -736,47 +729,6 @@ class DashboardRepository {
     }
 
     /**
-     * Calcule la performance d'expédition (taux d'expédition à temps).
-     * 
-     * Calcule le pourcentage de commandes expédiées (statut 2) avant leur date de livraison prévue.
-     * Une commande est considérée à temps si sa date de création est antérieure ou égale à delivery_date.
-     *
-     * @return array Tableau avec le taux et les compteurs.
-     */
-    private function getShippingPerformance(): array {
-        try {
-            // Commandes expédiées à temps (created_at <= delivery_date pour statut envoyé)
-            // On considère qu'une commande est expédiée à temps si elle passe au statut "envoyé" avant delivery_date
-            // Pour simplifier, on compare created_at avec delivery_date pour les commandes envoyées
-            $query = "SELECT 
-                        COUNT(*) as total_shipped,
-                        SUM(CASE WHEN c.created_at <= c.delivery_date THEN 1 ELSE 0 END) as on_time_count
-                      FROM commands c
-                      WHERE c.fk_status_id = 2";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->execute();
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            $totalShipped = (int)($result['total_shipped'] ?? 0);
-            $onTimeCount = (int)($result['on_time_count'] ?? 0);
-            $onTimeRate = $totalShipped > 0 ? round(($onTimeCount / $totalShipped) * 100, 1) : 0;
-            
-            return [
-                'totalShipped' => $totalShipped,
-                'onTimeCount' => $onTimeCount,
-                'onTimeRate' => $onTimeRate,
-            ];
-        } catch (PDOException $e) {
-            return [
-                'totalShipped' => 0,
-                'onTimeCount' => 0,
-                'onTimeRate' => 0,
-            ];
-        }
-    }
-
-    /**
      * Calcule le temps moyen de traitement d'une commande.
      * 
      * Calcule la moyenne du temps entre la création et le passage au statut "envoyé".
@@ -915,32 +867,4 @@ class DashboardRepository {
         }
     }
 
-    /**
-     * Récupère les alertes de réapprovisionnement.
-     * 
-     * Produits dont la quantité est en dessous du seuil de réapprovisionnement (quantité <= 20).
-     *
-     * @return array Liste des produits nécessitant un réapprovisionnement.
-     */
-    private function getReorderAlerts(): array {
-        try {
-            $threshold = 20; // Seuil de réapprovisionnement
-            $query = "SELECT 
-                        product_id,
-                        product_name,
-                        quantity,
-                        price,
-                        (quantity * price) as stock_value
-                      FROM stock
-                      WHERE quantity <= :threshold
-                      ORDER BY quantity ASC";
-            
-            $stmt = $this->conn->prepare($query);
-            $stmt->bindParam(':threshold', $threshold, PDO::PARAM_INT);
-            $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        } catch (PDOException $e) {
-            return [];
-        }
-    }
 }

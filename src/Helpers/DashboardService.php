@@ -123,14 +123,7 @@ class DashboardService {
         // KPI commandes
         $ordersToPrepare = (int)($datas['ordersToPrepare'] ?? 0);
         $ordersShipped = (int)($datas['ordersShipped'] ?? 0);
-        $ordersDelivered = (int)($datas['ordersDelivered'] ?? 0);
-        $onTimeShippingRate = (float)($datas['onTimeShippingRate'] ?? 0);
-        $onTimeShippingCount = (int)($datas['onTimeShippingCount'] ?? 0);
-        $totalShipped = (int)($datas['totalShipped'] ?? 0);
         $averageProcessingTime = (float)($datas['averageProcessingTime'] ?? 0);
-        
-        // Formatage du taux d'expédition
-        $shippingEvolution = $this->getEvolutionStyles($onTimeShippingRate >= 80 ? 1 : -1);
         
         // Formatage du temps moyen (heures -> jours si > 24h)
         $processingTimeFormatted = $this->formatProcessingTime($averageProcessingTime);
@@ -140,7 +133,6 @@ class DashboardService {
         $totalStockValue = (float)($datas['totalStockValue'] ?? 0);
         $stockRotation = $datas['stockRotation'] ?? [];
         $stockMovements = $datas['stockMovements'] ?? [];
-        $reorderAlerts = $datas['reorderAlerts'] ?? [];
         
         // Formatage de la valeur du stock
         $totalStockValueFormatted = number_format($totalStockValue, 2, ',', ' ') . ' €';
@@ -155,22 +147,14 @@ class DashboardService {
             // Commandes
             'ordersToPrepare' => $ordersToPrepare,
             'ordersShipped' => $ordersShipped,
-            'ordersDelivered' => $ordersDelivered,
-            'onTimeShippingRate' => $onTimeShippingRate,
-            'onTimeShippingCount' => $onTimeShippingCount,
-            'totalShipped' => $totalShipped,
             'averageProcessingTime' => $averageProcessingTime,
             'processingTimeFormatted' => $processingTimeFormatted,
-            'shippingEvolutionClass' => $shippingEvolution['textClass'],
-            'shippingEvolutionIcon' => $shippingEvolution['icon'],
-            'shippingEvolutionBgClass' => $shippingEvolution['bgClass'],
             // Stocks
             'lowStockProducts' => $lowStockProducts,
             'totalStockValue' => $totalStockValue,
             'totalStockValueFormatted' => $totalStockValueFormatted,
             'stockRotation' => $stockRotation,
             'stockMovements' => $stockMovements,
-            'reorderAlerts' => $reorderAlerts,
             // Graphiques
             'rotationLabelsJson' => $rotationLabelsJson,
             'rotationCountsJson' => $rotationCountsJson,

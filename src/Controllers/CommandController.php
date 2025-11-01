@@ -136,6 +136,24 @@ class CommandController {
                 exit;
             }
 
+            // Action pour passer de l'étape produits à l'étape livraison
+            if (isset($_POST['goToDelivery'])) {
+                $this->renderDeliveryStep($_POST);
+                exit;
+            }
+
+            // Action pour revenir de l'étape livraison à l'étape produits
+            if (isset($_POST['backToProducts'])) {
+                $this->renderProductStep($_POST);
+                exit;
+            }
+
+            // Action pour la pagination uniquement (sans changer d'étape)
+            if (isset($_POST['paginationOnly']) && isset($_POST['paginationPage'])) {
+                $this->renderProductStep($_POST);
+                exit;
+            }
+
             // Action pour créer une nouvelle commande
             if (isset($_POST['newCommand']) && isset($_POST['createCommand'])) {
                 $this->createCommand($_POST);
@@ -251,6 +269,7 @@ class CommandController {
         
         $datas['products'] = $mergedProducts;
         $datas['currentUser'] = $user;
+        $datas['step'] = 'products';
         
         $this->renderService->displayTemplates("ModifyCommands", $datas, "Modifier la commande");
         exit;
@@ -279,8 +298,175 @@ class CommandController {
         $datas['products'] = $products ?? [];
         
         $datas['currentUser'] = $user;
+        $datas['step'] = 'products';
         
         $this->renderService->displayTemplates("ModifyCommands", $datas, "Créer une commande");
+        exit;
+    }
+
+    /**
+     * Prépare et affiche l'étape de sélection des produits.
+     * 
+     * Affiche la page de sélection des produits pour une nouvelle commande
+     * ou pour modifier une commande existante.
+     *
+     * @param array $postData Données POST optionnelles (pour revenir en arrière).
+     * @return void
+     */
+    public function renderProductStep(array $postData = []): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        $datas = [];
+        
+        // Si on est en mode modification, récupérer les données de la commande
+        $commandId = $postData['commandId'] ?? null;
+        if ($commandId) {
+            $commandId = (int)$commandId;
+            
+            // Vérification des permissions
+            if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'modify')) {
+                $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
+                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                exit;
+            }
+            
+            // Récupération des données de la commande
+            $commandData = $this->commandRepository->getCommandById($commandId);
+            if (empty($commandData)) {
+                $this->statusMessageService->setMessage('Commande introuvable.', 'error');
+                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                exit;
+            }
+            
+            $datas = array_merge($datas, $commandData);
+        }
+        
+        // Récupération des produits en stock
+        $allProducts = $this->stockRepository->getAllProducts();
+        
+        // Fusion avec les produits existants de la commande si en mode modification
+        if ($commandId && isset($datas['products'])) {
+            $existingCommandProducts = $datas['products'] ?? [];
+            $mergedProducts = [];
+            foreach ($allProducts as $product) {
+                $productId = $product['product_id'];
+                $mergedProduct = $product;
+                
+                foreach ($existingCommandProducts as $existingProduct) {
+                    if ($existingProduct['product_id'] == $productId) {
+                        $mergedProduct['ordered_quantity'] = $existingProduct['quantity'];
+                        break;
+                    }
+                }
+                
+                if (!isset($mergedProduct['ordered_quantity'])) {
+                    $mergedProduct['ordered_quantity'] = 0;
+                }
+                
+                $mergedProducts[] = $mergedProduct;
+            }
+            
+            $datas['products'] = $mergedProducts;
+        } else {
+            // Préparer les produits avec quantité 0 pour nouvelle commande
+            foreach ($allProducts as &$product) {
+                $product['ordered_quantity'] = 0;
+            }
+            $datas['products'] = $allProducts;
+        }
+        
+        // Restaurer les quantités depuis POST si on revient en arrière
+        if (isset($postData['products']) && is_array($postData['products'])) {
+            foreach ($datas['products'] as &$product) {
+                $productId = $product['product_id'];
+                if (isset($postData['products'][$productId]['quantity'])) {
+                    $product['ordered_quantity'] = (int)$postData['products'][$productId]['quantity'];
+                }
+            }
+        }
+        
+        $datas['currentUser'] = $user;
+        $datas['step'] = 'products';
+        
+        $pageTitle = $commandId ? "Modifier la commande" : "Créer une commande";
+        $this->renderService->displayTemplates("ModifyCommands", $datas, $pageTitle);
+        exit;
+    }
+
+    /**
+     * Prépare et affiche l'étape de livraison avec récapitulatif.
+     * 
+     * Affiche la page de livraison avec le récapitulatif des produits sélectionnés
+     * et les champs pour les informations de livraison.
+     *
+     * @param array $postData Données POST contenant les produits sélectionnés.
+     * @return void
+     */
+    public function renderDeliveryStep(array $postData = []): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        $datas = [];
+        
+        // Récupération et traitement des produits sélectionnés
+        $products = $postData['products'] ?? [];
+        $selectedProducts = [];
+        
+        if (!empty($products) && is_array($products)) {
+            foreach ($products as $productId => $productData) {
+                $quantity = (int)($productData['quantity'] ?? 0);
+                if ($quantity > 0) {
+                    $selectedProducts[$productId] = ['quantity' => $quantity];
+                }
+            }
+        }
+        
+        // Vérification qu'au moins un produit est sélectionné
+        if (empty($selectedProducts)) {
+            $this->statusMessageService->setMessage('Veuillez sélectionner au moins un produit.', 'error');
+            $this->renderProductStep($postData);
+            exit;
+        }
+        
+        $datas['selectedProducts'] = $selectedProducts;
+        
+        // Si on est en mode modification, récupérer les données de la commande
+        $commandId = $postData['commandId'] ?? null;
+        if ($commandId) {
+            $commandId = (int)$commandId;
+            
+            // Vérification des permissions
+            if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'modify')) {
+                $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
+                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                exit;
+            }
+            
+            // Récupération des données de la commande
+            $commandData = $this->commandRepository->getCommandById($commandId);
+            if (empty($commandData)) {
+                $this->statusMessageService->setMessage('Commande introuvable.', 'error');
+                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                exit;
+            }
+            
+            $datas = array_merge($datas, $commandData);
+        }
+        
+        // Récupération de tous les produits avec leurs informations (prix, nom)
+        $allProducts = $this->stockRepository->getAllProducts();
+        $datas['products'] = $allProducts;
+        
+        // Récupération des statuts disponibles
+        $statusList = $this->commandRepository->getAllStatuses();
+        $datas['statusList'] = $statusList ?? [];
+        
+        $datas['currentUser'] = $user;
+        $datas['step'] = 'delivery';
+        
+        $pageTitle = $commandId ? "Modifier la commande" : "Créer une commande";
+        $this->renderService->displayTemplates("ModifyCommands", $datas, $pageTitle);
         exit;
     }
 

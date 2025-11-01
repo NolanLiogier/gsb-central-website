@@ -107,16 +107,17 @@ function updateOrderSummary() {
         }
     });
 
-    // Mettre à jour l'affichage
+    // Mettre à jour l'affichage du récapitulatif complet (étape 2)
     const summaryDiv = document.getElementById('order-summary');
-    
-    if (summaryHTML) {
-        summaryDiv.innerHTML = summaryHTML;
-    } else {
-        summaryDiv.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-shopping-cart text-4xl mb-2"></i><p>Aucun produit sélectionné</p></div>';
+    if (summaryDiv) {
+        if (summaryHTML) {
+            summaryDiv.innerHTML = summaryHTML;
+        } else {
+            summaryDiv.innerHTML = '<div class="text-center text-gray-500 py-8"><i class="fas fa-shopping-cart text-4xl mb-2"></i><p>Aucun produit sélectionné</p></div>';
+        }
     }
 
-    // Calculer et afficher les totaux
+    // Calculer et afficher les totaux complets (étape 2)
     const subtotalElement = document.getElementById('subtotal');
     const vatElement = document.getElementById('vat');
     const totalElement = document.getElementById('total');
@@ -128,6 +129,18 @@ function updateOrderSummary() {
         subtotalElement.textContent = formatFrenchNumber(subtotal) + ' €';
         vatElement.textContent = formatFrenchNumber(vat) + ' €';
         totalElement.textContent = formatFrenchNumber(total) + ' €';
+    }
+
+    // Mettre à jour le mini récapitulatif (étape 1)
+    const miniTotalElement = document.getElementById('mini-total');
+    const miniItemsElement = document.getElementById('mini-items');
+    
+    if (miniTotalElement && miniItemsElement) {
+        const total = subtotal * 1.20;
+        miniTotalElement.textContent = formatFrenchNumber(total) + ' €';
+        
+        const productText = selectedProductsCount === 1 ? 'produit' : 'produits';
+        miniItemsElement.textContent = selectedProductsCount + ' ' + productText;
     }
 }
 

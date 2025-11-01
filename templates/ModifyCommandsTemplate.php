@@ -2,25 +2,202 @@
 
 namespace Templates;
 
+use Templates\widgets\ProductWidget;
+
 /**
  * Classe ModifyCommandsTemplate
  * 
- * Gère l'affichage du template de modification de commande.
- * Crée un formulaire complet pour modifier les informations d'une commande :
- * date de livraison et statut.
+ * Gère l'affichage du template de modification de commande en deux étapes :
+ * - Étape 1 : Sélection des produits
+ * - Étape 2 : Informations de livraison et récapitulatif
  */
 class ModifyCommandsTemplate {
     /**
-     * Génère le contenu HTML du formulaire de modification de commande.
+     * Génère le contenu HTML selon l'étape demandée.
      * 
-     * Crée un formulaire avec validation des champs date de livraison
-     * et statut. Inclut des boutons d'annulation, suppression et sauvegarde.
+     * Route vers displayProductStep() ou displayDeliveryStep() selon l'étape.
      *
-     * @param array $datas Données de la commande (command_id, delivery_date, fk_status_id, created_at).
-     * @return string HTML complet du formulaire de modification.
+     * @param array $datas Données de la commande (command_id, delivery_date, fk_status_id, created_at, step).
+     * @return string HTML complet du formulaire.
      */
     public function displayModifyCommands(array $datas = []): string {
+        $step = $datas['step'] ?? 'products';
+        
+        if ($step === 'delivery') {
+            return $this->displayDeliveryStep($datas);
+        }
+        
+        return $this->displayProductStep($datas);
+    }
 
+    /**
+     * Génère le contenu HTML de l'étape 1 : Sélection des produits.
+     * 
+     * Affiche les produits disponibles avec pagination et permet leur sélection.
+     *
+     * @param array $datas Données de la commande et produits.
+     * @return string HTML de l'étape de sélection des produits.
+     */
+    private function displayProductStep(array $datas = []): string {
+
+        if (empty($datas)) {
+            $datas = [];
+        }
+
+        // Préparation des données pour l'affichage
+        $commandId = htmlspecialchars($datas['command_id'] ?? 0);
+        
+        // Détection du mode (modification ou création)
+        $isEditMode = !empty($commandId) && $commandId != '0';
+        $pageTitle = $isEditMode ? "Modifier la commande - Étape 1" : "Créer une commande - Étape 1";
+        $actionUrl = "/ModifyCommand";
+
+        // Indicateur de progression
+        $progressHtml = $this->generateProgressIndicator(1);
+
+        $modifyCommandContent = <<<HTML
+<!-- En-tête de la page -->
+<div class="mb-8">
+    <h1 class="text-4xl font-bold text-gray-800">{$pageTitle}</h1>
+    <p class="text-gray-600 mt-2">Sélectionnez les produits à commander</p>
+</div>
+
+{$progressHtml}
+
+<!-- Formulaire principal pour passer à l'étape suivante -->
+<form method="POST" action="{$actionUrl}" id="product-selection-form">
+    <!-- Champs cachés pour l'ID de la commande et l'étape -->
+HTML;
+        
+        $modifyCommandContent .= $this->generateHiddenFieldsForProductStep($isEditMode, $commandId);
+
+        // Récupération des informations utilisateur (nécessaire pour les contrôles de lecture seule)
+        $currentUser = $datas['currentUser'] ?? [];
+        $userFunctionId = $currentUser['fk_function_id'] ?? null;
+        $userAttributes = $this->generateUserAttributes($userFunctionId);
+        
+        // Récupération des produits depuis les données
+        $products = $datas['products'] ?? [];
+        
+        // Construction simple et propre de l'URL de base pour la pagination
+        $paginationBaseUrl = $this->buildPaginationUrl($actionUrl, $isEditMode, $commandId);
+        
+        // Génération des cartes de produits avec pagination via le widget
+        // Utiliser la pagination par formulaire pour éviter les paramètres GET
+        $productWidget = new ProductWidget();
+        $hiddenFields = [];
+        if ($isEditMode) {
+            $hiddenFields['commandId'] = $commandId;
+        }
+        $hiddenFields['step'] = 'products';
+        $hiddenFields['paginationOnly'] = 'true';
+        
+        $productsHtml = $productWidget->render([
+            'products' => $products,
+            'itemsPerPage' => 6,
+            'baseUrl' => $paginationBaseUrl,
+            'userAttributes' => $userAttributes,
+            'useFormPagination' => true,
+            'formId' => 'product-selection-form',
+            'paginationHiddenFields' => $hiddenFields
+        ]);
+
+        // Génération des données JSON des produits pour JavaScript
+        $productsJson = $this->generateProductsJson($products);
+
+        // Mini récapitulatif pour l'étape 1
+        $miniSummaryHtml = $this->generateMiniSummary();
+
+        $modifyCommandContent .= <<<HTML
+
+    <!-- Sélection des produits -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
+        <div class="flex items-center justify-between mb-8">
+            <h2 class="text-xl font-semibold text-gray-800">Sélectionner les produits</h2>
+        </div>
+        
+        {$productsHtml}
+    </div>
+
+    <!-- Mini récapitulatif -->
+    {$miniSummaryHtml}
+
+    <!-- Boutons d'action -->
+    <div class="flex justify-end space-x-4 mt-8">
+        <a href="/Commands" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Annuler</a>
+        <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium shadow-lg" {$userAttributes['disabledAttr']}>
+            Continuer <i class="fas fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+
+<script type="application/json" id="products-data">{$productsJson}</script>
+</form>
+
+<script>
+// Debug: vérifier que le formulaire est bien soumis
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('product-selection-form');
+    if (form) {
+        // Vérifier que goToDelivery est bien présent
+        const goToDeliveryInput = form.querySelector('input[name="goToDelivery"]');
+        if (!goToDeliveryInput) {
+            console.error('Erreur: Le champ goToDelivery est manquant dans le formulaire');
+        }
+        
+        // Log lors de la soumission pour debug
+        form.addEventListener('submit', function(e) {
+            const goToDelivery = form.querySelector('input[name="goToDelivery"]');
+            const paginationOnly = form.querySelector('input[name="paginationOnly"]');
+            
+            if (paginationOnly && paginationOnly.value === 'true') {
+                console.log('Pagination détectée, pas de progression vers l\'étape suivante');
+            } else if (goToDelivery && goToDelivery.value === 'true') {
+                console.log('Soumission du formulaire pour passer à l\'étape de livraison');
+            } else {
+                console.warn('Avertissement: Aucun indicateur d\'action détecté (goToDelivery ou paginationOnly)');
+            }
+        });
+    }
+});
+</script>
+
+<!-- Import du script de gestion des commandes -->
+<script src="/public/assets/js/modify-commands.js"></script>
+
+<!-- Styles personnalisés pour l'espacement des cartes -->
+<style>
+.product-card {
+    margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    .product-card {
+        margin-bottom: 2rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .product-card {
+        margin-bottom: 2rem;
+    }
+}
+</style>
+
+HTML;
+
+        return $modifyCommandContent;
+    }
+
+    /**
+     * Génère le contenu HTML de l'étape 2 : Informations de livraison et récapitulatif.
+     * 
+     * Affiche le récapitulatif des produits sélectionnés, les informations de livraison
+     * et permet la soumission finale de la commande.
+     *
+     * @param array $datas Données de la commande et produits sélectionnés.
+     * @return string HTML de l'étape de livraison.
+     */
+    private function displayDeliveryStep(array $datas = []): string {
         if (empty($datas)) {
             $datas = [];
         }
@@ -46,14 +223,29 @@ class ModifyCommandsTemplate {
 
         // Détection du mode (modification ou création)
         $isEditMode = !empty($commandId) && $commandId != '0';
-        $pageTitle = $isEditMode ? "Modifier la commande" : "Créer une commande";
+        $pageTitle = $isEditMode ? "Modifier la commande - Étape 2" : "Créer une commande - Étape 2";
         $actionUrl = "/ModifyCommand";
+
+        // Récupération des produits sélectionnés (depuis POST)
+        // Format attendu: [$productId => ['quantity' => X]]
+        $selectedProducts = $datas['selectedProducts'] ?? [];
+
+        // Récupération des informations utilisateur
+        $currentUser = $datas['currentUser'] ?? [];
+        $userFunctionId = $currentUser['fk_function_id'] ?? null;
+        $userAttributes = $this->generateUserAttributes($userFunctionId);
+
+        // Indicateur de progression
+        $progressHtml = $this->generateProgressIndicator(2);
 
         $modifyCommandContent = <<<HTML
 <!-- En-tête de la page -->
 <div class="mb-8">
     <h1 class="text-4xl font-bold text-gray-800">{$pageTitle}</h1>
+    <p class="text-gray-600 mt-2">Vérifiez les informations et finalisez votre commande</p>
 </div>
+
+{$progressHtml}
 
 <!-- Formulaire principal pour sauvegarder les informations -->
 <form method="POST" action="{$actionUrl}">
@@ -61,56 +253,30 @@ class ModifyCommandsTemplate {
 HTML;
         
         $modifyCommandContent .= $this->generateHiddenFields($isEditMode, $commandId);
+        
+        // Ajouter les produits sélectionnés comme champs cachés
+        $modifyCommandContent .= $this->generateHiddenProductFields($selectedProducts);
 
         $modifyCommandContent .= <<<HTML
-
-    <!-- Sélection des produits -->
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-8 mb-8">
-        <div class="flex items-center justify-between mb-8">
-            <h2 class="text-xl font-semibold text-gray-800">Sélectionner les produits</h2>
-        </div>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-HTML;
-
-        // Récupération des informations utilisateur (nécessaire pour les contrôles de lecture seule)
-        $currentUser = $datas['currentUser'] ?? [];
-        $userFunctionId = $currentUser['fk_function_id'] ?? null;
-        $userAttributes = $this->generateUserAttributes($userFunctionId);
-        
-        // Récupération des produits depuis les données
-        $products = $datas['products'] ?? [];
-        
-        // Génération des cartes de produits
-        $modifyCommandContent .= $this->generateProductCards($products, $userAttributes);
-
-        $modifyCommandContent .= <<<HTML
-        </div>
-    </div>
 
     <!-- Récapitulatif de la commande -->
     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-8">
         <h2 class="text-2xl font-semibold text-gray-800 mb-6">Récapitulatif de la commande</h2>
         
-        <div id="order-summary" class="space-y-3 mb-6">
-            <div class="text-center text-gray-500 py-8">
-                <i class="fas fa-shopping-cart text-4xl mb-2"></i>
-                <p>Aucun produit sélectionné</p>
-            </div>
-        </div>
+        {$this->generateOrderSummary($selectedProducts, $datas['products'] ?? [])}
         
-        <div class="border-t border-gray-200 pt-4">
+        <div class="border-t border-gray-200 pt-4 mt-6">
             <div class="flex justify-between items-center mb-2">
                 <span class="text-gray-600">Sous-total</span>
-                <span id="subtotal" class="font-medium">0,00 €</span>
+                <span id="subtotal" class="font-medium">{$this->calculateSubtotal($selectedProducts, $datas['products'] ?? [])}</span>
             </div>
             <div class="flex justify-between items-center mb-2">
                 <span class="text-gray-600">TVA (20%)</span>
-                <span id="vat" class="font-medium">0,00 €</span>
+                <span id="vat" class="font-medium">{$this->calculateVAT($selectedProducts, $datas['products'] ?? [])}</span>
             </div>
             <div class="flex justify-between items-center text-lg font-semibold">
                 <span>Total</span>
-                <span id="total" class="text-blue-600">0,00 €</span>
+                <span id="total" class="text-blue-600">{$this->calculateTotal($selectedProducts, $datas['products'] ?? [])}</span>
             </div>
         </div>
     </div>
@@ -163,48 +329,47 @@ HTML;
         // Affichage du statut selon le rôle
         $modifyCommandContent .= $this->generateStatusField($userFunctionId, $statusList, $statusId, $userAttributes);
 
-        // Génération des données JSON des produits pour JavaScript
-        $productsJson = $this->generateProductsJson($products);
-
         $modifyCommandContent .= <<<HTML
             </div>
 
             <!-- Boutons d'action -->
             <div class="flex justify-end space-x-4 pt-8 mt-8 border-t border-gray-200">
-                <a href="/Commands" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Retour</a>
+                <button type="submit" name="backToProducts" value="true" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">
+                    <i class="fas fa-arrow-left mr-2"></i> Retour
+                </button>
+                <a href="/Commands" class="px-6 py-3 text-gray-600 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors duration-200 font-medium">Annuler</a>
                 {$submitButton}
             </div>
         </div>
     </div>
-
-<script type="application/json" id="products-data">{$productsJson}</script>
 </form>
-
-<!-- Import du script de gestion des commandes -->
-<script src="/public/assets/js/modify-commands.js"></script>
-
-<!-- Styles personnalisés pour l'espacement des cartes -->
-<style>
-.product-card {
-    margin-bottom: 1.5rem;
-}
-
-@media (min-width: 768px) {
-    .product-card {
-        margin-bottom: 2rem;
-    }
-}
-
-@media (min-width: 1024px) {
-    .product-card {
-        margin-bottom: 2rem;
-    }
-}
-</style>
 
 HTML;
 
         return $modifyCommandContent;
+    }
+
+    /**
+     * Génère les champs cachés pour l'étape de sélection des produits.
+     * 
+     * @param bool $isEditMode True si en mode modification.
+     * @param string|int $commandId ID de la commande.
+     * @return string Champs cachés HTML générés.
+     */
+    private function generateHiddenFieldsForProductStep(bool $isEditMode, $commandId): string
+    {
+        $commandIdEscaped = htmlspecialchars($commandId);
+        
+        $html = '<input type="hidden" name="step" value="products">';
+        // Le champ goToDelivery sera présent par défaut, mais sera supprimé par JavaScript lors de la pagination
+        // Cela permet de distinguer un clic sur "Continuer" (goToDelivery présent) d'un clic sur pagination (paginationOnly présent)
+        $html .= '<input type="hidden" name="goToDelivery" id="goToDeliveryField" value="true">';
+        
+        if ($isEditMode) {
+            $html .= '<input type="hidden" name="commandId" value="' . $commandIdEscaped . '">';
+        }
+        
+        return $html;
     }
 
     /**
@@ -235,6 +400,249 @@ HTML;
     }
 
     /**
+     * Génère les champs cachés pour les produits sélectionnés.
+     * 
+     * @param array $selectedProducts Produits sélectionnés avec leurs quantités.
+     * @return string Champs cachés HTML générés.
+     */
+    private function generateHiddenProductFields(array $selectedProducts): string
+    {
+        $html = '';
+        foreach ($selectedProducts as $productId => $productData) {
+            $quantity = (int)($productData['quantity'] ?? 0);
+            if ($quantity > 0) {
+                $productIdEscaped = htmlspecialchars($productId);
+                $quantityEscaped = htmlspecialchars($quantity);
+                $html .= "<input type=\"hidden\" name=\"products[{$productIdEscaped}][quantity]\" value=\"{$quantityEscaped}\">\n    ";
+            }
+        }
+        return $html;
+    }
+
+    /**
+     * Génère l'indicateur de progression pour les deux étapes.
+     * 
+     * @param int $currentStep Étape actuelle (1 ou 2).
+     * @return string HTML de l'indicateur de progression.
+     */
+    private function generateProgressIndicator(int $currentStep): string
+    {
+        $step1Class = $currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600';
+        $step2Class = $currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600';
+        $progressLineClass = $currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200';
+        $step1LabelClass = $currentStep >= 1 ? 'text-blue-600' : 'text-gray-500';
+        $step2LabelClass = $currentStep >= 2 ? 'text-blue-600' : 'text-gray-500';
+        
+        return <<<HTML
+<div class="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div class="flex items-center justify-center">
+        <div class="flex items-center">
+            <div class="flex items-center {$step1Class} rounded-full w-10 h-10 justify-center font-semibold">
+                1
+            </div>
+            <div class="w-24 h-1 mx-4 {$progressLineClass}"></div>
+            <div class="flex items-center {$step2Class} rounded-full w-10 h-10 justify-center font-semibold">
+                2
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center justify-center mt-4">
+        <div class="flex items-center space-x-32">
+            <span class="text-sm font-medium {$step1LabelClass}">Sélection des produits</span>
+            <span class="text-sm font-medium {$step2LabelClass}">Informations de livraison</span>
+        </div>
+    </div>
+</div>
+HTML;
+    }
+
+    /**
+     * Génère un mini récapitulatif pour l'étape 1.
+     * 
+     * @return string HTML du mini récapitulatif.
+     */
+    private function generateMiniSummary(): string
+    {
+        return <<<HTML
+    <!-- Mini récapitulatif -->
+    <div class="bg-blue-50 rounded-lg border border-blue-200 p-6 mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Récapitulatif</h3>
+                <p class="text-sm text-gray-600">Les détails complets seront affichés à l'étape suivante</p>
+            </div>
+            <div class="text-right">
+                <div class="text-2xl font-bold text-blue-600" id="mini-total">0,00 €</div>
+                <div class="text-xs text-gray-500 mt-1" id="mini-items">0 produit(s)</div>
+            </div>
+        </div>
+    </div>
+HTML;
+    }
+
+    /**
+     * Génère le récapitulatif de la commande pour l'étape 2.
+     * 
+     * @param array $selectedProducts Produits sélectionnés avec leurs quantités.
+     * @param array $allProducts Tous les produits avec leurs informations (prix, nom).
+     * @return string HTML du récapitulatif.
+     */
+    private function generateOrderSummary(array $selectedProducts, array $allProducts): string
+    {
+        // Créer un tableau de recherche pour les produits
+        $productsMap = [];
+        foreach ($allProducts as $product) {
+            $productsMap[$product['product_id']] = $product;
+        }
+        
+        $summaryHtml = '<div class="space-y-3">';
+        $hasProducts = false;
+        
+        foreach ($selectedProducts as $productId => $productData) {
+            $quantity = (int)($productData['quantity'] ?? 0);
+            if ($quantity > 0 && isset($productsMap[$productId])) {
+                $hasProducts = true;
+                $product = $productsMap[$productId];
+                $productName = htmlspecialchars($product['product_name']);
+                $price = (float)$product['price'];
+                $lineTotal = $price * $quantity;
+                $lineTotalFormatted = number_format($lineTotal, 2, ',', ' ');
+                
+                $summaryHtml .= <<<HTML
+            <div class="flex justify-between items-center py-2 border-b border-gray-100">
+                <span class="text-gray-700">{$quantity}x {$productName}</span>
+                <span class="font-semibold text-gray-900">{$lineTotalFormatted} €</span>
+            </div>
+HTML;
+            }
+        }
+        
+        if (!$hasProducts) {
+            $summaryHtml .= <<<HTML
+            <div class="text-center text-gray-500 py-8">
+                <i class="fas fa-shopping-cart text-4xl mb-2"></i>
+                <p>Aucun produit sélectionné</p>
+            </div>
+HTML;
+        }
+        
+        $summaryHtml .= '</div>';
+        
+        return $summaryHtml;
+    }
+
+    /**
+     * Calcule le sous-total de la commande.
+     * 
+     * @param array $selectedProducts Produits sélectionnés avec leurs quantités.
+     * @param array $allProducts Tous les produits avec leurs informations (prix).
+     * @return string Sous-total formaté.
+     */
+    private function calculateSubtotal(array $selectedProducts, array $allProducts): string
+    {
+        $subtotal = 0;
+        
+        // Créer un tableau de recherche pour les produits
+        $productsMap = [];
+        foreach ($allProducts as $product) {
+            $productsMap[$product['product_id']] = $product;
+        }
+        
+        foreach ($selectedProducts as $productId => $productData) {
+            $quantity = (int)($productData['quantity'] ?? 0);
+            if ($quantity > 0 && isset($productsMap[$productId])) {
+                $price = (float)$productsMap[$productId]['price'];
+                $subtotal += $price * $quantity;
+            }
+        }
+        
+        return number_format($subtotal, 2, ',', ' ') . ' €';
+    }
+
+    /**
+     * Calcule la TVA (20%) de la commande.
+     * 
+     * @param array $selectedProducts Produits sélectionnés avec leurs quantités.
+     * @param array $allProducts Tous les produits avec leurs informations (prix).
+     * @return string TVA formatée.
+     */
+    private function calculateVAT(array $selectedProducts, array $allProducts): string
+    {
+        $subtotal = 0;
+        
+        // Créer un tableau de recherche pour les produits
+        $productsMap = [];
+        foreach ($allProducts as $product) {
+            $productsMap[$product['product_id']] = $product;
+        }
+        
+        foreach ($selectedProducts as $productId => $productData) {
+            $quantity = (int)($productData['quantity'] ?? 0);
+            if ($quantity > 0 && isset($productsMap[$productId])) {
+                $price = (float)$productsMap[$productId]['price'];
+                $subtotal += $price * $quantity;
+            }
+        }
+        
+        $vat = $subtotal * 0.20;
+        return number_format($vat, 2, ',', ' ') . ' €';
+    }
+
+    /**
+     * Calcule le total de la commande (sous-total + TVA).
+     * 
+     * @param array $selectedProducts Produits sélectionnés avec leurs quantités.
+     * @param array $allProducts Tous les produits avec leurs informations (prix).
+     * @return string Total formaté.
+     */
+    private function calculateTotal(array $selectedProducts, array $allProducts): string
+    {
+        $subtotal = 0;
+        
+        // Créer un tableau de recherche pour les produits
+        $productsMap = [];
+        foreach ($allProducts as $product) {
+            $productsMap[$product['product_id']] = $product;
+        }
+        
+        foreach ($selectedProducts as $productId => $productData) {
+            $quantity = (int)($productData['quantity'] ?? 0);
+            if ($quantity > 0 && isset($productsMap[$productId])) {
+                $price = (float)$productsMap[$productId]['price'];
+                $subtotal += $price * $quantity;
+            }
+        }
+        
+        $total = $subtotal * 1.20;
+        return number_format($total, 2, ',', ' ') . ' €';
+    }
+
+    /**
+     * Construit l'URL de base pour la pagination de manière propre et simple.
+     * 
+     * Génère une URL propre qui reste sur la page ModifyCommand,
+     * en incluant l'ID de la commande uniquement si en mode édition.
+     *
+     * @param string $actionUrl URL de base de l'action (généralement /ModifyCommand).
+     * @param bool $isEditMode True si en mode modification.
+     * @param string|int $commandId ID de la commande à inclure dans l'URL.
+     * @return string URL de base pour la pagination.
+     */
+    private function buildPaginationUrl(string $actionUrl, bool $isEditMode, $commandId): string
+    {
+        // Toujours utiliser /ModifyCommand comme base
+        $baseUrl = '/ModifyCommand';
+        
+        // Ajouter commandId uniquement en mode édition
+        if ($isEditMode && !empty($commandId) && $commandId != '0') {
+            $commandIdEscaped = htmlspecialchars($commandId);
+            $baseUrl .= '?commandId=' . $commandIdEscaped;
+        }
+        
+        return $baseUrl;
+    }
+
+    /**
      * Génère les attributs utilisateur selon le rôle (lecture seule pour logisticien).
      * 
      * Détermine si l'utilisateur est en mode lecture seule et génère les attributs
@@ -256,74 +664,6 @@ HTML;
         ];
     }
 
-    /**
-     * Génère les cartes HTML pour chaque produit.
-     * 
-     * Crée les cartes de produits avec leurs informations (nom, prix, stock)
-     * et les contrôles de quantité. Applique les attributs de lecture seule
-     * pour les utilisateurs sans droits de modification.
-     *
-     * @param array $products Liste des produits avec leurs informations.
-     * @param array $userAttributes Attributs utilisateur (disabled, readonly, classes).
-     * @return string HTML des cartes de produits générées.
-     */
-    private function generateProductCards(array $products, array $userAttributes): string
-    {
-        $html = '';
-        
-        foreach ($products as $product) {
-            $productId = htmlspecialchars($product['product_id']);
-            $productName = htmlspecialchars($product['product_name']);
-            $price = htmlspecialchars(number_format($product['price'], 2, ',', ' '));
-            $quantity = htmlspecialchars($product['quantity']);
-            $orderedQuantity = htmlspecialchars($product['ordered_quantity'] ?? 0);
-            $stockStatus = $quantity > 0 ? 'En stock' : 'Rupture';
-            $stockClass = $quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
-            
-            $html .= <<<HTML
-            <div class="product-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:border-blue-300" data-product-id="{$productId}">
-                <div class="flex justify-between items-start mb-4">
-                    <h3 class="text-base font-semibold text-gray-900 leading-tight">{$productName}</h3>
-                    <span class="{$stockClass} px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ml-2">
-                        {$stockStatus}: {$quantity}
-                    </span>
-                </div>
-                
-                <div class="mb-4">
-                    <div class="flex items-baseline space-x-1">
-                        <span class="text-xl font-bold text-blue-600">{$price} €</span>
-                        <span class="text-xs text-gray-500">par unité</span>
-                    </div>
-                </div>
-                
-                <div class="space-y-3">
-                    <label class="block text-xs font-medium text-gray-700">Quantité commandée</label>
-                    <div class="flex items-center justify-start">
-                        <div class="flex items-center border border-gray-300 rounded-lg overflow-hidden bg-white">
-                            <button type="button" onclick="decreaseQuantity('{$productId}')" 
-                                    {$userAttributes['disabledAttr']}
-                                    class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    id="decrease-btn-{$productId}">
-                                <i class="fas fa-minus text-xs"></i>
-                            </button>
-                            <input type="number" id="quantity-{$productId}" name="products[{$productId}][quantity]" value="{$orderedQuantity}" min="0" max="{$quantity}" 
-                                   {$userAttributes['readonlyAttr']}
-                                   class="w-16 text-center border-0 focus:ring-0 focus:outline-none font-medium text-sm text-gray-900 bg-white {$userAttributes['disabledClass']}">
-                            <button type="button" onclick="increaseQuantity('{$productId}', {$quantity})" 
-                                    {$userAttributes['disabledAttr']}
-                                    class="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    id="increase-btn-{$productId}">
-                                <i class="fas fa-plus text-xs"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-HTML;
-        }
-        
-        return $html;
-    }
 
     /**
      * Génère le bouton de suppression de commande.

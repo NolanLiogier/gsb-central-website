@@ -31,7 +31,10 @@ HTML;
         $currentUser = $datas['currentUser'] ?? [];
         $userFunctionId = $currentUser['fk_function_id'] ?? null;
         
+        $commandContent .= '<div class="flex items-center space-x-4">';
+        $commandContent .= $this->generateExportButton();
         $commandContent .= $this->generateCreateButton($userFunctionId);
+        $commandContent .= '</div>';
         
         $commandContent .= <<<HTML
         </div>
@@ -187,6 +190,26 @@ HTML;
         }
         
         return $buttons ?: '<span class="text-gray-400 text-xs">Aucune action</span>';
+    }
+
+    /**
+     * Génère le bouton d'export CSV.
+     * 
+     * Affiche le bouton d'export pour tous les utilisateurs authentifiés.
+     *
+     * @return string HTML du bouton d'export CSV.
+     */
+    private function generateExportButton(): string
+    {
+        return <<<HTML
+        <form action="/Commands" method="POST" class="inline-block">
+            <input type="hidden" name="exportCsv" value="true">
+            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
+                <i class="fas fa-file-csv text-white"></i>
+                <span>Exporter en CSV</span>
+            </button>
+        </form>
+HTML;
     }
 
     /**

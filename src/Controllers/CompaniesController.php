@@ -154,6 +154,12 @@ class CompaniesController {
                 $this->deleteCompany((int)$_POST['companyId']);
                 exit;
             }
+
+            // Action pour exporter une entreprise en PDF
+            if (isset($_POST['companyId']) && isset($_POST['exportPdf'])) {
+                $this->exportPdf((int)$_POST['companyId']);
+                exit;
+            }
         }
 
         // Récupération des données des entreprises selon le rôle de l'utilisateur
@@ -383,6 +389,105 @@ class CompaniesController {
         // Succès : message de confirmation et redirection vers la liste des entreprises
         $this->statusMessageService->setMessage('L\'entreprise a été supprimée avec succès.', 'success');
         $this->router->getRoute('/Companies');
+        exit;
+    }
+
+    /**
+     * Exporte une entreprise en format PDF.
+     * 
+     * Génère un fichier PDF avec les informations d'une entreprise spécifique
+     * au format simple "Label : valeur". Accessible à tous les utilisateurs.
+     *
+     * @param int $companyId ID de l'entreprise à exporter.
+     * @return void
+     */
+    public function exportPdf(int $companyId): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+
+        // Récupération des données de l'entreprise
+        $company = $this->companiesRepository->getCompanyById($companyId);
+        
+        if (empty($company)) {
+            $this->statusMessageService->setMessage('Entreprise introuvable.', 'error');
+            $this->router->getRoute('/Companies');
+            exit;
+        }
+
+        // Import de TCPDF via l'autoloader Composer
+        require_once __DIR__ . '/../../vendor/autoload.php';
+
+        // Création de l'instance TCPDF (Portrait, mm, A4)
+        $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+
+        // Configuration des métadonnées du document
+        $pdf->SetCreator('GSB Central');
+        $pdf->SetAuthor('GSB Central');
+        $pdf->SetTitle('Fiche entreprise');
+        $pdf->SetSubject('Export entreprise');
+
+        // Suppression des en-têtes et pieds de page par défaut
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Ajout d'une page
+        $pdf->AddPage();
+
+        // Titre
+        $pdf->SetFont('helvetica', 'B', 20);
+        $pdf->Cell(0, 10, 'Fiche entreprise', 0, 1, 'C');
+        $pdf->Ln(10);
+
+        // Configuration de la police pour le contenu
+        $pdf->SetFont('helvetica', '', 12);
+
+        // Formatage du nom du commercial
+        $salesmanName = 'Non assigné';
+        if (!empty($company['selected_salesman_firstname']) && !empty($company['selected_salesman_lastname'])) {
+            $salesmanName = ucfirst($company['selected_salesman_firstname']) . ' ' . ucfirst($company['selected_salesman_lastname']);
+        }
+
+        // Tableau des informations à afficher (label => valeur)
+        $companyData = [
+            'Nom' => mb_strtoupper($company['company_name'] ?? '', 'UTF-8'),
+            'SIRET' => $company['siret'] ?? '-',
+            'SIREN' => $company['siren'] ?? '-',
+            'Secteur' => $company['selected_sector_name'] ?? '-',
+            'Commercial' => $salesmanName
+        ];
+
+        // Affichage des informations au format "Label : valeur"
+        $lineHeight = 10;
+        $labelWidth = 60;
+        $valueWidth = 120;
+
+        foreach ($companyData as $label => $value) {
+            // Affichage du label en gras
+            $pdf->SetFont('helvetica', 'B', 12);
+            $pdf->Cell($labelWidth, $lineHeight, $label . ' :', 0, 0, 'L');
+            
+            // Affichage de la valeur
+            $pdf->SetFont('helvetica', '', 12);
+            $pdf->Cell($valueWidth, $lineHeight, $value, 0, 1, 'L');
+            $pdf->Ln(5);
+        }
+
+        // Affichage de l'adresse de livraison séparément (multiligne)
+        $deliveryAddress = $company['delivery_address'] ?? 'Non renseignée';
+        $pdf->SetFont('helvetica', 'B', 12);
+        $pdf->Cell($labelWidth, $lineHeight, 'Adresse de livraison :', 0, 0, 'L');
+        $pdf->SetFont('helvetica', '', 12);
+        $pdf->MultiCell($valueWidth, $lineHeight, $deliveryAddress, 0, 'L');
+        $pdf->Ln(5);
+
+        // Date de génération en bas de page
+        $pdf->Ln(15);
+        $pdf->SetFont('helvetica', 'I', 10);
+        $pdf->Cell(0, 10, 'Généré le ' . date('d/m/Y à H:i'), 0, 1, 'C');
+
+        // Génération du PDF et envoi au navigateur
+        $filename = 'entreprise_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $company['company_name'] ?? '') . '_' . date('Y-m-d_His') . '.pdf';
+        $pdf->Output($filename, 'D');
         exit;
     }
 }

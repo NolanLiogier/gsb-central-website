@@ -183,6 +183,12 @@ class CommandController {
                 $this->sendCommand((int)$_POST['commandId']);
                 exit;
             }
+
+            // Action pour exporter les commandes en CSV
+            if (isset($_POST['exportCsv'])) {
+                $this->exportCsv();
+                exit;
+            }
         }
 
         // Récupération de l'utilisateur actuel
@@ -694,6 +700,114 @@ class CommandController {
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été envoyée avec succès.', 'success');
         header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        exit;
+    }
+
+    /**
+     * Exporte les commandes en format CSV.
+     * 
+     * Génère un fichier CSV avec toutes les commandes visibles par l'utilisateur
+     * selon son rôle. Inclut les informations de commande, client, entreprise
+     * et produits selon les permissions.
+     *
+     * @return void
+     */
+    public function exportCsv(): void {
+        // Récupération de l'utilisateur actuel
+        $user = $this->getCurrentUser();
+        
+        // Récupération des commandes selon le rôle de l'utilisateur
+        $commands = $this->commandRepository->getCommandsByUserRole($user);
+        
+        if (empty($commands)) {
+            $this->statusMessageService->setMessage('Aucune commande à exporter.', 'info');
+            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            exit;
+        }
+
+        // Détermination des colonnes selon le rôle
+        $userFunctionId = $user['fk_function_id'] ?? null;
+        $includeClientInfo = ($userFunctionId == 1 || $userFunctionId == 3);
+
+        // Configuration des en-têtes HTTP pour le téléchargement CSV
+        $filename = 'commandes_' . date('Y-m-d_His') . '.csv';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+
+        // Ajout du BOM UTF-8 pour une meilleure compatibilité avec Excel
+        echo "\xEF\xBB\xBF";
+
+        // Ouverture du flux de sortie
+        $output = fopen('php://output', 'w');
+
+        // Génération des en-têtes CSV
+        $headers = ['ID Commande'];
+        if ($includeClientInfo) {
+            $headers[] = 'Client';
+            $headers[] = 'Email';
+            $headers[] = 'Entreprise';
+        }
+        $headers[] = 'Date de livraison';
+        $headers[] = 'Date de création';
+        $headers[] = 'Statut';
+        $headers[] = 'Produits';
+        $headers[] = 'Quantité totale';
+        $headers[] = 'Montant total';
+
+        fputcsv($output, $headers, ';');
+
+        // Génération des lignes de données
+        foreach ($commands as $command) {
+            $row = [];
+            
+            // ID Commande
+            $row[] = $command['command_id'] ?? '';
+            
+            // Informations client (si applicable)
+            if ($includeClientInfo) {
+                $clientName = trim(($command['firstname'] ?? '') . ' ' . ($command['lastname'] ?? ''));
+                $row[] = $clientName;
+                $row[] = $command['email'] ?? '';
+                $row[] = $command['company_name'] ?? '';
+            }
+            
+            // Dates
+            $deliveryDate = isset($command['delivery_date']) ? date('d/m/Y H:i', strtotime($command['delivery_date'])) : '';
+            $createdAt = isset($command['created_at']) ? date('d/m/Y H:i', strtotime($command['created_at'])) : '';
+            $row[] = $deliveryDate;
+            $row[] = $createdAt;
+            
+            // Statut
+            $row[] = $command['status_name'] ?? '';
+            
+            // Produits : formatage en chaîne lisible
+            $products = $command['products'] ?? [];
+            $productNames = [];
+            $totalQuantity = 0;
+            $totalAmount = 0;
+            
+            foreach ($products as $product) {
+                $productName = $product['product_name'] ?? '';
+                $quantity = (int)($product['quantity'] ?? 0);
+                $price = (float)($product['price'] ?? 0);
+                
+                if ($quantity > 0) {
+                    $productNames[] = $productName . ' (' . $quantity . ')';
+                    $totalQuantity += $quantity;
+                    $totalAmount += $price * $quantity;
+                }
+            }
+            
+            $row[] = implode(', ', $productNames);
+            $row[] = $totalQuantity;
+            $row[] = number_format($totalAmount, 2, ',', ' ') . ' €';
+            
+            fputcsv($output, $row, ';');
+        }
+
+        fclose($output);
         exit;
     }
 }

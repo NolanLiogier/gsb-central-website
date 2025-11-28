@@ -16,20 +16,23 @@ use PDOException;
 class UserRepository
 {
     /**
-     * Instance de la classe Database pour accéder à la connexion.
+     * Connexion PDO à la base de données.
+     * Réutilisée pour toutes les opérations de ce repository.
      * 
-     * @var Database
+     * @var PDO|null
      */
-    private Database $database;
+    private ?PDO $conn = null;
 
     /**
-     * Initialise le repository en créant l'instance de la classe Database.
+     * Initialise le repository en établissant la connexion à la base de données.
+     * La connexion est établie via la classe Database qui centralise la configuration.
+     * Utilise la méthode statique pour éviter les problèmes avec les constructeurs privés.
      * 
      * @return void
      */
     public function __construct()
     {
-        $this->database = new Database();
+        $this->conn = Database::getStaticConnection();
     }
 
     /**
@@ -46,8 +49,10 @@ class UserRepository
     public function getUserByEmail(string $email): array
     {
         try {
-            // Récupération de la connexion à la base de données
-            $conn = $this->database->getConnection();
+            // Vérification de la connexion avant la requête
+            if (!$this->conn) {
+                return [];
+            }
 
             // Requête avec paramètres nommés pour éviter les injections SQL
             // LEFT JOIN sur functions pour récupérer le rôle même si non défini
@@ -55,7 +60,7 @@ class UserRepository
                     FROM users u 
                     LEFT JOIN functions f ON u.fk_function_id = f.function_id 
                     WHERE u.email = :email";
-            $stmt = $conn->prepare($sql);
+            $stmt = $this->conn->prepare($sql);
             $stmt->execute(['email' => $email]);
             
             // ?? opérateur null coalescing pour retourner un tableau vide si fetch() retourne false

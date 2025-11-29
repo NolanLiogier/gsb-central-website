@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Repositories\CommandRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\StockRepository;
+use App\Repositories\CompaniesRepository;
 use App\Helpers\RenderService;
 use App\Helpers\AuthenticationService;
 use App\Helpers\StatusMessageService;
@@ -36,6 +37,13 @@ class CommandController {
      * @var StockRepository
      */
     private StockRepository $stockRepository;
+    
+    /**
+     * Repository pour l'accès aux données des entreprises.
+     * 
+     * @var CompaniesRepository
+     */
+    private CompaniesRepository $companiesRepository;
     
     /**
      * Service de rendu des templates.
@@ -84,6 +92,7 @@ class CommandController {
         $this->commandRepository = new CommandRepository();
         $this->userRepository = new UserRepository();
         $this->stockRepository = new StockRepository();
+        $this->companiesRepository = new CompaniesRepository();
         $this->renderService = new RenderService();
         $this->authenticationService = new AuthenticationService();
         $this->statusMessageService = new StatusMessageService();
@@ -295,6 +304,15 @@ class CommandController {
         // Récupération de l'utilisateur actuel
         $user = $this->getCurrentUser();
         
+        // Récupération de l'adresse de livraison de l'entreprise pour préremplir le champ
+        $userCompanyId = $user['fk_company_id'] ?? null;
+        if ($userCompanyId) {
+            $company = $this->companiesRepository->getCompanyById($userCompanyId);
+            if (!empty($company) && isset($company['delivery_address'])) {
+                $datas['company_delivery_address'] = $company['delivery_address'];
+            }
+        }
+        
         // Récupération des statuts disponibles pour les listes déroulantes
         $statusList = $this->commandRepository->getAllStatuses();
         $datas['statusList'] = $statusList ?? [];
@@ -346,6 +364,17 @@ class CommandController {
             }
             
             $datas = array_merge($datas, $commandData);
+        }
+        
+        // Récupération de l'adresse de livraison de l'entreprise pour préremplir le champ (si nouvelle commande)
+        if (!$commandId) {
+            $userCompanyId = $user['fk_company_id'] ?? null;
+            if ($userCompanyId) {
+                $company = $this->companiesRepository->getCompanyById($userCompanyId);
+                if (!empty($company) && isset($company['delivery_address'])) {
+                    $datas['company_delivery_address'] = $company['delivery_address'];
+                }
+            }
         }
         
         // Récupération des produits en stock
@@ -498,6 +527,27 @@ class CommandController {
             'fk_status_id' => 3 // Par défaut, nouvelle commande = "en attente"
         ];
 
+        // Récupération et validation de l'adresse de livraison
+        $deliveryAddressData = $datas['deliveryAddress'] ?? [];
+        if (!empty($deliveryAddressData) && is_array($deliveryAddressData)) {
+            $commandData['delivery_address_data'] = [
+                'street' => trim($deliveryAddressData['street'] ?? ''),
+                'city' => trim($deliveryAddressData['city'] ?? ''),
+                'postal_code' => trim($deliveryAddressData['postal_code'] ?? ''),
+                'country' => trim($deliveryAddressData['country'] ?? 'France'),
+                'additional_info' => trim($deliveryAddressData['additional_info'] ?? '')
+            ];
+            
+            // Validation des champs obligatoires de l'adresse
+            if (empty($commandData['delivery_address_data']['street']) || 
+                empty($commandData['delivery_address_data']['city']) || 
+                empty($commandData['delivery_address_data']['postal_code'])) {
+                $this->statusMessageService->setMessage('Veuillez remplir tous les champs obligatoires de l\'adresse de livraison.', 'error');
+                $this->renderAddCommand();
+                exit;
+            }
+        }
+
         // Vérification qu'au moins un produit est sélectionné
         $products = $datas['products'] ?? [];
         
@@ -542,6 +592,7 @@ class CommandController {
      * Nettoie les données du formulaire, tente la mise à jour en base, affiche un message
      * d'erreur en cas d'échec, ou redirige vers la liste des commandes avec un message
      * de succès. Vérifie les permissions avant la mise à jour.
+     * Les commerciaux ne peuvent pas modifier le statut de la commande.
      *
      * @param array $datas Données brutes du formulaire POST.
      * @return void
@@ -551,6 +602,7 @@ class CommandController {
         
         // Récupération de l'utilisateur actuel
         $user = $this->getCurrentUser();
+        $userFunctionId = $user['fk_function_id'] ?? null;
         
         // Vérification des permissions pour modifier la commande
         if (!$this->commandRepository->canUserPerformAction($user, (int)$commandId, 'modify')) {
@@ -559,12 +611,41 @@ class CommandController {
             exit;
         }
         
+        // Récupération du statut : préserver le statut existant pour tous les utilisateurs
+        // Les modifications de statut se font via la page globale des commandes
+        $currentCommand = $this->commandRepository->getCommandById((int)$commandId);
+        $statusId = 1; // Valeur par défaut
+        if (!empty($currentCommand) && isset($currentCommand['fk_status_id'])) {
+            $statusId = (int)$currentCommand['fk_status_id'];
+        }
+        
         // Normalisation des données : trim pour supprimer les espaces et gestion des valeurs par défaut
         $commandData = [
             'command_id' => $commandId,
             'delivery_date' => trim($datas['deliveryDate'] ?? ''),
-            'fk_status_id' => (int)($datas['statusId'] ?? 1)
+            'fk_status_id' => $statusId
         ];
+
+        // Récupération et validation de l'adresse de livraison
+        $deliveryAddressData = $datas['deliveryAddress'] ?? [];
+        if (!empty($deliveryAddressData) && is_array($deliveryAddressData)) {
+            $commandData['delivery_address_data'] = [
+                'street' => trim($deliveryAddressData['street'] ?? ''),
+                'city' => trim($deliveryAddressData['city'] ?? ''),
+                'postal_code' => trim($deliveryAddressData['postal_code'] ?? ''),
+                'country' => trim($deliveryAddressData['country'] ?? 'France'),
+                'additional_info' => trim($deliveryAddressData['additional_info'] ?? '')
+            ];
+            
+            // Validation des champs obligatoires de l'adresse
+            if (empty($commandData['delivery_address_data']['street']) || 
+                empty($commandData['delivery_address_data']['city']) || 
+                empty($commandData['delivery_address_data']['postal_code'])) {
+                $this->statusMessageService->setMessage('Veuillez remplir tous les champs obligatoires de l\'adresse de livraison.', 'error');
+                $this->router->redirect('/Commands');
+                exit;
+            }
+        }
 
         // Récupération et traitement des données des produits
         $products = $datas['products'] ?? [];

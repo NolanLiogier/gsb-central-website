@@ -8,6 +8,7 @@ function increaseQuantity(productId, maxQuantity) {
     const currentValue = parseInt(input.value) || 0;
     if (currentValue < maxQuantity) {
         input.value = currentValue + 1;
+        saveProductQuantitiesToStorage();
         updateOrderSummary();
     }
 }
@@ -18,6 +19,7 @@ function decreaseQuantity(productId) {
     const currentValue = parseInt(input.value) || 0;
     if (currentValue > 0) {
         input.value = currentValue - 1;
+        saveProductQuantitiesToStorage();
         updateOrderSummary();
     }
 }
@@ -152,6 +154,7 @@ function initQuantityInputListeners() {
         if (input) {
             // Mettre à jour lors de la saisie (input) et lors de la validation (change)
             input.addEventListener('input', function() {
+                saveProductQuantitiesToStorage();
                 updateOrderSummary();
             });
             input.addEventListener('change', function() {
@@ -166,10 +169,178 @@ function initQuantityInputListeners() {
                     this.value = max;
                 }
                 
+                saveProductQuantitiesToStorage();
                 updateOrderSummary();
             });
         }
     });
+}
+
+/**
+ * Stocke les quantités des produits dans le localStorage.
+ * 
+ * Cette fonction est appelée à chaque modification de quantité pour persister
+ * les données entre les changements de page de pagination.
+ * 
+ * @return {void}
+ */
+function saveProductQuantitiesToStorage() {
+    if (typeof products === 'undefined') return;
+    
+    const quantities = {};
+    
+    // Parcourir tous les produits connus
+    Object.keys(products).forEach(productId => {
+        const input = document.getElementById('quantity-' + productId);
+        if (input) {
+            quantities[productId] = parseInt(input.value) || 0;
+        } else {
+            // Si le champ n'existe pas, chercher dans le localStorage
+            const stored = localStorage.getItem('productQuantity_' + productId);
+            if (stored !== null) {
+                quantities[productId] = parseInt(stored) || 0;
+            } else {
+                quantities[productId] = 0;
+            }
+        }
+    });
+    
+    // Stocker toutes les quantités dans le localStorage
+    localStorage.setItem('productQuantities', JSON.stringify(quantities));
+}
+
+/**
+ * Restaure les quantités des produits depuis le localStorage.
+ * 
+ * Cette fonction est appelée au chargement de la page pour restaurer
+ * les quantités qui ont été saisies sur d'autres pages de pagination.
+ * Synchronise d'abord le localStorage avec les valeurs actuelles des champs visibles,
+ * puis restaure les valeurs pour les produits visibles depuis le localStorage.
+ * 
+ * @return {void}
+ */
+function restoreProductQuantitiesFromStorage() {
+    if (typeof products === 'undefined') return;
+    
+    try {
+        // D'abord, synchroniser le localStorage avec les valeurs actuelles des champs visibles
+        // Cela permet de préserver les valeurs venant du serveur (commande existante)
+        const currentQuantities = {};
+        Object.keys(products).forEach(productId => {
+            const input = document.getElementById('quantity-' + productId);
+            if (input) {
+                currentQuantities[productId] = parseInt(input.value) || 0;
+            }
+        });
+        
+        // Récupérer les quantités stockées
+        const stored = localStorage.getItem('productQuantities');
+        let storedQuantities = {};
+        if (stored) {
+            storedQuantities = JSON.parse(stored);
+        }
+        
+        // Fusionner : les valeurs actuelles (visibles) ont priorité sur les valeurs stockées
+        const mergedQuantities = { ...storedQuantities, ...currentQuantities };
+        
+        // Restaurer les quantités pour les produits visibles depuis le localStorage
+        // (mais seulement si elles ne sont pas déjà définies dans les champs)
+        Object.keys(mergedQuantities).forEach(productId => {
+            const input = document.getElementById('quantity-' + productId);
+            if (input) {
+                const currentValue = parseInt(input.value) || 0;
+                const storedValue = mergedQuantities[productId] || 0;
+                // Si le champ est vide ou à 0, restaurer depuis le localStorage
+                if (currentValue === 0 && storedValue > 0) {
+                    input.value = storedValue;
+                    mergedQuantities[productId] = storedValue;
+                } else if (currentValue > 0) {
+                    // Si le champ a déjà une valeur, la conserver
+                    mergedQuantities[productId] = currentValue;
+                }
+            }
+        });
+        
+        // Mettre à jour le localStorage avec les quantités fusionnées
+        localStorage.setItem('productQuantities', JSON.stringify(mergedQuantities));
+    } catch (error) {
+        console.error('Erreur lors de la restauration des quantités:', error);
+    }
+}
+
+/**
+ * Collecte toutes les quantités des produits (visibles et non visibles) et les stocke dans des champs cachés.
+ * 
+ * Cette fonction est appelée avant la soumission du formulaire pour la pagination
+ * afin de préserver les quantités des produits qui ne sont pas sur la page courante.
+ * 
+ * @param {HTMLFormElement} form Formulaire à modifier.
+ * @return {void}
+ */
+function collectAllProductQuantities(form) {
+    if (!form || typeof products === 'undefined') return;
+    
+    // Récupérer les quantités depuis le localStorage
+    let quantities = {};
+    try {
+        const stored = localStorage.getItem('productQuantities');
+        if (stored) {
+            quantities = JSON.parse(stored);
+        }
+    } catch (error) {
+        console.error('Erreur lors de la lecture du localStorage:', error);
+    }
+    
+    // Parcourir tous les produits connus
+    Object.keys(products).forEach(productId => {
+        // Chercher le champ de quantité dans le DOM (même s'il n'est pas visible)
+        const input = document.getElementById('quantity-' + productId);
+        let quantity = 0;
+        
+        if (input) {
+            // Si le champ existe dans le DOM, utiliser sa valeur et la sauvegarder
+            quantity = parseInt(input.value) || 0;
+            quantities[productId] = quantity;
+        } else {
+            // Si le champ n'existe pas (produit non visible), utiliser la valeur du localStorage
+            quantity = quantities[productId] || 0;
+        }
+        
+        // Créer ou mettre à jour le champ caché pour ce produit
+        let hiddenInput = form.querySelector(`input[name="products[${productId}][quantity]"]`);
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = `products[${productId}][quantity]`;
+            form.appendChild(hiddenInput);
+        }
+        hiddenInput.value = quantity;
+    });
+    
+    // Mettre à jour le localStorage avec toutes les quantités
+    localStorage.setItem('productQuantities', JSON.stringify(quantities));
+}
+
+/**
+ * Nettoie le localStorage des quantités de produits.
+ * 
+ * Cette fonction est appelée lorsque la commande est soumise ou annulée
+ * pour éviter de conserver des données obsolètes.
+ * 
+ * @return {void}
+ */
+function clearProductQuantitiesStorage() {
+    try {
+        localStorage.removeItem('productQuantities');
+        // Nettoyer aussi les quantités individuelles si elles existent
+        if (typeof products !== 'undefined') {
+            Object.keys(products).forEach(productId => {
+                localStorage.removeItem('productQuantity_' + productId);
+            });
+        }
+    } catch (error) {
+        console.error('Erreur lors du nettoyage du localStorage:', error);
+    }
 }
 
 // Initialisation au chargement de la page
@@ -177,9 +348,21 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser les données des produits
     initProductsData();
     
+    // Restaurer les quantités depuis le localStorage
+    restoreProductQuantitiesFromStorage();
+    
     // Initialiser les écouteurs d'événements pour les champs de quantité
     initQuantityInputListeners();
     
     // Mettre à jour le récapitulatif
     updateOrderSummary();
+    
+    // Nettoyer le localStorage lors de la soumission du formulaire
+    const form = document.getElementById('product-selection-form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            // C'est une vraie soumission, nettoyer le localStorage
+            clearProductQuantitiesStorage();
+        });
+    }
 });

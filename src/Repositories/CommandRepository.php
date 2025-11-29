@@ -5,6 +5,7 @@ namespace App\Repositories;
 use Config\Database;
 use PDO;
 use PDOException;
+use App\Repositories\DeliveryAddressRepository;
 
 /**
  * Classe CommandRepository
@@ -86,35 +87,47 @@ class CommandRepository {
             if ($userFunctionId == 2) { // Client
                 // Client : toutes les commandes de son entreprise
                 $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
-                                 u.firstname, u.lastname, u.email
+                                 u.firstname, u.lastname, u.email,
+                                 cd.fk_delivery_address
                           FROM commands c
                           LEFT JOIN status s ON c.fk_status_id = s.status_id
                           LEFT JOIN users u ON c.fk_user_id = u.user_id
+                          LEFT JOIN command_details cd ON c.command_id = cd.fk_command_id
                           WHERE u.fk_company_id = :company_id
+                          GROUP BY c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                                   u.firstname, u.lastname, u.email, cd.fk_delivery_address
                           ORDER BY c.created_at DESC";
                 $params[':company_id'] = $userCompanyId;
                 
             } elseif ($userFunctionId == 1) { // Commercial
                 // Commercial : commandes des entreprises qui lui sont assignées
                 $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
-                                 u.firstname, u.lastname, u.email, comp.company_name
+                                 u.firstname, u.lastname, u.email, comp.company_name,
+                                 cd.fk_delivery_address
                           FROM commands c
                           LEFT JOIN status s ON c.fk_status_id = s.status_id
                           LEFT JOIN users u ON c.fk_user_id = u.user_id
                           LEFT JOIN companies comp ON u.fk_company_id = comp.company_id
+                          LEFT JOIN command_details cd ON c.command_id = cd.fk_command_id
                           WHERE comp.fk_salesman_id = :salesman_id
+                          GROUP BY c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                                   u.firstname, u.lastname, u.email, comp.company_name, cd.fk_delivery_address
                           ORDER BY c.created_at DESC";
                 $params[':salesman_id'] = $userId;
                 
             } elseif ($userFunctionId == 3) { // Logisticien
                 // Logisticien : toutes les commandes avec statut "validé" (1)
                 $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
-                                 u.firstname, u.lastname, u.email, comp.company_name
+                                 u.firstname, u.lastname, u.email, comp.company_name,
+                                 cd.fk_delivery_address
                           FROM commands c
                           LEFT JOIN status s ON c.fk_status_id = s.status_id
                           LEFT JOIN users u ON c.fk_user_id = u.user_id
                           LEFT JOIN companies comp ON u.fk_company_id = comp.company_id
+                          LEFT JOIN command_details cd ON c.command_id = cd.fk_command_id
                           WHERE c.fk_status_id = 1
+                          GROUP BY c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                                   u.firstname, u.lastname, u.email, comp.company_name, cd.fk_delivery_address
                           ORDER BY c.created_at DESC";
             } else {
                 // Rôle non reconnu
@@ -131,9 +144,33 @@ class CommandRepository {
             $stmt->execute();
             $commands = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Pour chaque commande, récupérer les détails des produits
+            // Pour chaque commande, récupérer les détails des produits et l'adresse de livraison
+            $deliveryAddressRepository = new DeliveryAddressRepository();
             foreach ($commands as &$command) {
                 $command['products'] = $this->getCommandProducts($command['command_id']);
+                
+                // Récupérer l'adresse de livraison si elle existe
+                if (!empty($command['fk_delivery_address']) && $command['fk_delivery_address'] !== null) {
+                    $deliveryAddress = $deliveryAddressRepository->getAddressById((int)$command['fk_delivery_address']);
+                    if ($deliveryAddress) {
+                        // Construire une chaîne d'adresse complète pour l'affichage
+                        $addressParts = [];
+                        if (!empty($deliveryAddress['street'])) {
+                            $addressParts[] = $deliveryAddress['street'];
+                        }
+                        if (!empty($deliveryAddress['postal_code']) || !empty($deliveryAddress['city'])) {
+                            $addressParts[] = trim(($deliveryAddress['postal_code'] ?? '') . ' ' . ($deliveryAddress['city'] ?? ''));
+                        }
+                        if (!empty($deliveryAddress['country'])) {
+                            $addressParts[] = $deliveryAddress['country'];
+                        }
+                        if (!empty($deliveryAddress['additional_info'])) {
+                            $addressParts[] = $deliveryAddress['additional_info'];
+                        }
+                        $command['delivery_address'] = implode(', ', $addressParts);
+                        $command['delivery_address_data'] = $deliveryAddress;
+                    }
+                }
             }
             
             // Fermeture de la connexion
@@ -173,10 +210,13 @@ class CommandRepository {
             }
 
             // Récupération de toutes les commandes de l'utilisateur triées par date
-            $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name
+            $query = "SELECT c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name,
+                             cd.fk_delivery_address
                       FROM commands c
                       LEFT JOIN status s ON c.fk_status_id = s.status_id
+                      LEFT JOIN command_details cd ON c.command_id = cd.fk_command_id
                       WHERE c.fk_user_id = :user_id
+                      GROUP BY c.command_id, c.delivery_date, c.created_at, c.fk_status_id, s.status_name, cd.fk_delivery_address
                       ORDER BY c.created_at DESC";
             
             $stmt = $conn->prepare($query);
@@ -185,9 +225,33 @@ class CommandRepository {
             
             $commands = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
-            // Pour chaque commande, récupérer les détails des produits
+            // Pour chaque commande, récupérer les détails des produits et l'adresse de livraison
+            $deliveryAddressRepository = new DeliveryAddressRepository();
             foreach ($commands as &$command) {
                 $command['products'] = $this->getCommandProducts($command['command_id']);
+                
+                // Récupérer l'adresse de livraison si elle existe
+                if (!empty($command['fk_delivery_address']) && $command['fk_delivery_address'] !== null) {
+                    $deliveryAddress = $deliveryAddressRepository->getAddressById((int)$command['fk_delivery_address']);
+                    if ($deliveryAddress) {
+                        // Construire une chaîne d'adresse complète pour l'affichage
+                        $addressParts = [];
+                        if (!empty($deliveryAddress['street'])) {
+                            $addressParts[] = $deliveryAddress['street'];
+                        }
+                        if (!empty($deliveryAddress['postal_code']) || !empty($deliveryAddress['city'])) {
+                            $addressParts[] = trim(($deliveryAddress['postal_code'] ?? '') . ' ' . ($deliveryAddress['city'] ?? ''));
+                        }
+                        if (!empty($deliveryAddress['country'])) {
+                            $addressParts[] = $deliveryAddress['country'];
+                        }
+                        if (!empty($deliveryAddress['additional_info'])) {
+                            $addressParts[] = $deliveryAddress['additional_info'];
+                        }
+                        $command['delivery_address'] = implode(', ', $addressParts);
+                        $command['delivery_address_data'] = $deliveryAddress;
+                    }
+                }
             }
             
             // Fermeture de la connexion
@@ -209,7 +273,7 @@ class CommandRepository {
      * Récupère les produits d'une commande spécifique.
      * 
      * @param int $commandId ID de la commande.
-     * @return array Liste des produits avec leurs quantités.
+     * @return array Liste des produits avec leurs quantités et adresse de livraison.
      */
     private function getCommandProducts(int $commandId): array {
         // Initialisation de la connexion à la base de données
@@ -221,11 +285,12 @@ class CommandRepository {
                 return [];
             }
             
-            $query = "SELECT st.product_id, st.product_name, st.price, COUNT(cd.details_id) as quantity
+            $query = "SELECT st.product_id, st.product_name, st.price, COUNT(cd.details_id) as quantity,
+                             cd.fk_delivery_address
                       FROM command_details cd
                       JOIN stock st ON cd.fk_product_id = st.product_id
                       WHERE cd.fk_command_id = :command_id
-                      GROUP BY st.product_id, st.product_name, st.price";
+                      GROUP BY st.product_id, st.product_name, st.price, cd.fk_delivery_address";
             
             $stmt = $conn->prepare($query);
             $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
@@ -251,10 +316,10 @@ class CommandRepository {
      * Récupère les données d'une commande spécifique par son ID.
      * 
      * Récupère toutes les informations nécessaires pour l'édition d'une commande,
-     * incluant les produits commandés.
+     * incluant les produits commandés et l'adresse de livraison.
      *
      * @param int $commandId ID de la commande à récupérer.
-     * @return array Données de la commande avec command_id, delivery_date, created_at, fk_status_id, fk_user_id, products, ou tableau vide.
+     * @return array Données de la commande avec command_id, delivery_date, created_at, fk_status_id, fk_user_id, products, delivery_address, ou tableau vide.
      */
     public function getCommandById(int $commandId): array {
         // Initialisation de la connexion à la base de données
@@ -281,7 +346,32 @@ class CommandRepository {
             
             if ($result) {
                 // Ajouter les produits de la commande
-                $result['products'] = $this->getCommandProducts($commandId);
+                $products = $this->getCommandProducts($commandId);
+                $result['products'] = $products;
+                
+                // Récupérer l'adresse de livraison depuis le premier produit (tous les produits d'une commande partagent la même adresse)
+                if (!empty($products) && isset($products[0]['fk_delivery_address']) && $products[0]['fk_delivery_address'] !== null) {
+                    $deliveryAddressRepository = new DeliveryAddressRepository();
+                    $deliveryAddress = $deliveryAddressRepository->getAddressById((int)$products[0]['fk_delivery_address']);
+                    if ($deliveryAddress) {
+                        // Construire une chaîne d'adresse complète pour l'affichage
+                        $addressParts = [];
+                        if (!empty($deliveryAddress['street'])) {
+                            $addressParts[] = $deliveryAddress['street'];
+                        }
+                        if (!empty($deliveryAddress['postal_code']) || !empty($deliveryAddress['city'])) {
+                            $addressParts[] = trim(($deliveryAddress['postal_code'] ?? '') . ' ' . ($deliveryAddress['city'] ?? ''));
+                        }
+                        if (!empty($deliveryAddress['country'])) {
+                            $addressParts[] = $deliveryAddress['country'];
+                        }
+                        if (!empty($deliveryAddress['additional_info'])) {
+                            $addressParts[] = $deliveryAddress['additional_info'];
+                        }
+                        $result['delivery_address'] = implode(', ', $addressParts);
+                        $result['delivery_address_data'] = $deliveryAddress;
+                    }
+                }
             }
             
             // Fermeture de la connexion
@@ -363,9 +453,22 @@ class CommandRepository {
                     return false;
                 }
 
-                // Insérer les nouveaux détails des produits
-                $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, created_at) 
-                                VALUES (:command_id, :product_id, NOW())";
+                // Gestion de l'adresse de livraison : trouver ou créer l'adresse
+                $deliveryAddressId = null;
+                if (!empty($commandData['delivery_address_data'])) {
+                    $deliveryAddressRepository = new DeliveryAddressRepository();
+                    $deliveryAddressId = $deliveryAddressRepository->findOrCreateAddress($commandData['delivery_address_data']);
+                    if ($deliveryAddressId === null) {
+                        $conn->rollBack();
+                        $conn = null;
+                        $database = null;
+                        return false;
+                    }
+                }
+
+                // Insérer les nouveaux détails des produits avec l'adresse de livraison
+                $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, fk_delivery_address, created_at) 
+                                VALUES (:command_id, :product_id, :delivery_address_id, NOW())";
                 $detailsStmt = $conn->prepare($detailsQuery);
 
                 foreach ($products as $productId => $productData) {
@@ -375,6 +478,7 @@ class CommandRepository {
                     for ($i = 0; $i < $quantity; $i++) {
                         $detailsStmt->bindParam(':command_id', $commandData['command_id'], PDO::PARAM_INT);
                         $detailsStmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
+                        $detailsStmt->bindValue(':delivery_address_id', $deliveryAddressId, $deliveryAddressId !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
                         
                         if (!$detailsStmt->execute()) {
                             $conn->rollBack();
@@ -460,10 +564,23 @@ class CommandRepository {
             // Récupération de l'ID de la commande créée
             $commandId = $conn->lastInsertId();
 
-            // Insertion des détails des produits dans command_details
+            // Gestion de l'adresse de livraison : trouver ou créer l'adresse
+            $deliveryAddressId = null;
+            if (!empty($commandData['delivery_address_data'])) {
+                $deliveryAddressRepository = new DeliveryAddressRepository();
+                $deliveryAddressId = $deliveryAddressRepository->findOrCreateAddress($commandData['delivery_address_data']);
+                if ($deliveryAddressId === null) {
+                    $conn->rollBack();
+                    $conn = null;
+                    $database = null;
+                    return false;
+                }
+            }
+
+            // Insertion des détails des produits dans command_details avec l'adresse de livraison
             if (!empty($products)) {
-                $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, created_at) 
-                                VALUES (:command_id, :product_id, NOW())";
+                $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, fk_delivery_address, created_at) 
+                                VALUES (:command_id, :product_id, :delivery_address_id, NOW())";
                 $detailsStmt = $conn->prepare($detailsQuery);
 
                 foreach ($products as $productId => $productData) {
@@ -473,6 +590,7 @@ class CommandRepository {
                     for ($i = 0; $i < $quantity; $i++) {
                         $detailsStmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
                         $detailsStmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
+                        $detailsStmt->bindValue(':delivery_address_id', $deliveryAddressId, $deliveryAddressId !== null ? PDO::PARAM_INT : PDO::PARAM_NULL);
                         
                         if (!$detailsStmt->execute()) {
                             $conn->rollBack();

@@ -40,56 +40,47 @@ class ProductWidget {
         $formId = $config['formId'] ?? null;
         $paginationHiddenFields = $config['paginationHiddenFields'] ?? [];
 
-        // Pagination - vérifier dans POST si on utilise la pagination par formulaire
-        if ($useFormPagination && isset($_POST['paginationPage'])) {
-            $currentPage = max(1, (int)$_POST['paginationPage']);
-        } else {
-            $currentPage = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-        }
+        // Pour la pagination JavaScript dynamique, on génère TOUTES les cartes
+        // La pagination sera gérée côté client avec JavaScript
         $totalItems = count($products);
         $totalPages = max(1, ceil($totalItems / $itemsPerPage));
         
-        // Validation de la page courante
-        if ($currentPage > $totalPages) {
-            $currentPage = $totalPages;
-        }
-        
-        // Calcul des indices pour la pagination
-        $startIndex = ($currentPage - 1) * $itemsPerPage;
-        $paginatedProducts = array_slice($products, $startIndex, $itemsPerPage);
+        // Page initiale pour l'affichage initial (mais toutes les cartes seront générées)
+        $currentPage = 1;
 
         $html = '';
 
-        // Génération des cartes de produits
-        if (empty($paginatedProducts) && $totalItems === 0) {
+        // Génération de TOUTES les cartes de produits avec attributs de pagination
+        if (empty($products) && $totalItems === 0) {
             $html .= $this->generateEmptyState($emptyMessage, $emptyIcon);
         } else {
-            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">';
-            $html .= $this->generateProductCards($paginatedProducts, $userAttributes);
+            $html .= '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8" id="products-grid">';
+            $html .= $this->generateProductCardsWithPagination($products, $userAttributes, $itemsPerPage);
             $html .= '</div>';
         }
 
-        // Ajout de la pagination si nécessaire
+        // Ajout de la pagination JavaScript dynamique si nécessaire
         if ($totalItems > $itemsPerPage) {
-            if ($useFormPagination) {
-                $html .= $this->generateFormPagination($currentPage, $totalPages, $formId, $paginationHiddenFields, $baseUrl);
-            } else {
-                $html .= $this->generatePagination($currentPage, $totalPages, $baseUrl);
-            }
+            $html .= $this->generateJavaScriptPagination($totalPages, $itemsPerPage);
         }
 
         return $html;
     }
 
     /**
-     * Génère les cartes HTML pour chaque produit.
+     * Génère les cartes HTML pour chaque produit avec attributs de pagination.
+     * 
+     * Génère toutes les cartes avec des attributs data-page et data-item pour
+     * permettre la pagination JavaScript dynamique sans refresh.
      * 
      * @param array $products Liste des produits avec leurs informations.
      * @param array $userAttributes Attributs utilisateur (disabled, readonly, classes).
+     * @param int $itemsPerPage Nombre d'éléments par page.
      * @return string HTML des cartes de produits générées.
      */
-    private function generateProductCards(array $products, array $userAttributes): string {
+    private function generateProductCardsWithPagination(array $products, array $userAttributes, int $itemsPerPage): string {
         $html = '';
+        $itemIndex = 0;
         
         foreach ($products as $product) {
             $productId = htmlspecialchars($product['product_id']);
@@ -100,8 +91,22 @@ class ProductWidget {
             $stockStatus = $quantity > 0 ? 'En stock' : 'Rupture';
             $stockClass = $quantity > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
             
+            // Calculer la page et l'index dans la page pour cet élément
+            $pageNumber = floor($itemIndex / $itemsPerPage) + 1;
+            $itemInPage = ($itemIndex % $itemsPerPage) + 1;
+            
+            // Attributs data pour la pagination JavaScript
+            $dataPage = htmlspecialchars($pageNumber);
+            $dataItem = htmlspecialchars($itemInPage);
+            
+            // Classe CSS pour masquer les cartes qui ne sont pas sur la première page
+            $hiddenClass = $pageNumber > 1 ? 'hidden' : '';
+            
             $html .= <<<HTML
-            <div class="product-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:border-blue-300" data-product-id="{$productId}">
+            <div class="product-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-all duration-200 hover:border-blue-300 {$hiddenClass}" 
+                 data-product-id="{$productId}" 
+                 data-page="{$dataPage}" 
+                 data-item="{$dataItem}">
                 <div class="flex justify-between items-start mb-4">
                     <h3 class="text-base font-semibold text-gray-900 leading-tight">{$productName}</h3>
                     <span class="{$stockClass} px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ml-2">
@@ -140,6 +145,7 @@ class ProductWidget {
                 </div>
             </div>
 HTML;
+            $itemIndex++;
         }
         
         return $html;
@@ -407,6 +413,12 @@ HTML;
             function submitPaginationPage(page, formId) {
                 const form = formId ? document.getElementById(formId) : document.querySelector('form[method="POST"]');
                 if (form) {
+                    // Collecter toutes les quantités des produits (visibles et non visibles) avant la soumission
+                    // Cela préserve les quantités des produits qui ne sont pas sur la page courante
+                    if (typeof collectAllProductQuantities === 'function') {
+                        collectAllProductQuantities(form);
+                    }
+                    
                     // Créer ou mettre à jour l'input de pagination
                     let pageInput = form.querySelector('input[name="paginationPage"]');
                     if (!pageInput) {
@@ -434,10 +446,176 @@ HTML;
                     }
                     
                     // Soumettre le formulaire
-                    // Les quantités visibles seront préservées, les autres seront recalculées côté serveur
+                    // Toutes les quantités sont maintenant préservées dans des champs cachés
                     form.submit();
                 }
             }
+        </script>
+
+HTML;
+    }
+
+    /**
+     * Génère la pagination JavaScript dynamique sans refresh de page.
+     * 
+     * Crée les contrôles de pagination qui utilisent JavaScript pour
+     * afficher/masquer les cartes de produits selon la page sélectionnée.
+     * 
+     * @param int $totalPages Nombre total de pages.
+     * @param int $itemsPerPage Nombre d'éléments par page.
+     * @return string HTML de la pagination JavaScript.
+     */
+    private function generateJavaScriptPagination(int $totalPages, int $itemsPerPage): string {
+        $totalPagesEscaped = htmlspecialchars($totalPages);
+        
+        // Les numéros de page seront générés dynamiquement par JavaScript
+        // On laisse juste un conteneur vide qui sera rempli
+        $pageNumbersHtml = '';
+        
+        return <<<HTML
+
+        <!-- Pagination JavaScript dynamique -->
+        <div class="mt-6 flex items-center justify-between" id="pagination-controls">
+            <div class="text-sm text-gray-700">
+                Page <span class="font-medium" id="current-page-display">1</span> sur <span class="font-medium">{$totalPagesEscaped}</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <button type="button" onclick="showPreviousPage()" 
+                   class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors" id="prev-btn">
+                    <i class="fas fa-chevron-left"></i> Précédent
+                </button>
+                
+                <!-- Numéros de page -->
+                <div class="flex items-center space-x-1" id="page-numbers">
+                    {$pageNumbersHtml}
+                </div>
+                
+                <button type="button" onclick="showNextPage()" 
+                   class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors" id="next-btn">
+                    Suivant <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+        
+        <script>
+            // Variable globale pour la page courante
+            let currentPage = 1;
+            const totalPages = {$totalPagesEscaped};
+            
+            /**
+             * Affiche la page spécifiée en masquant/affichent les cartes appropriées.
+             * 
+             * @param {number} page Numéro de la page à afficher.
+             */
+            function showPage(page) {
+                if (page < 1 || page > totalPages) return;
+                
+                currentPage = page;
+                
+                // Masquer toutes les cartes
+                const allCards = document.querySelectorAll('.product-card');
+                allCards.forEach(card => {
+                    card.classList.add('hidden');
+                });
+                
+                // Afficher uniquement les cartes de la page courante
+                const pageCards = document.querySelectorAll('.product-card[data-page="' + page + '"]');
+                pageCards.forEach(card => {
+                    card.classList.remove('hidden');
+                });
+                
+                // Mettre à jour l'affichage de la page courante
+                updatePaginationDisplay();
+            }
+            
+            /**
+             * Affiche la page précédente.
+             */
+            function showPreviousPage() {
+                if (currentPage > 1) {
+                    showPage(currentPage - 1);
+                }
+            }
+            
+            /**
+             * Affiche la page suivante.
+             */
+            function showNextPage() {
+                if (currentPage < totalPages) {
+                    showPage(currentPage + 1);
+                }
+            }
+            
+            /**
+             * Met à jour l'affichage de la pagination (numéro de page, boutons actifs).
+             */
+            function updatePaginationDisplay() {
+                // Mettre à jour le texte de la page courante
+                const currentPageDisplay = document.getElementById('current-page-display');
+                if (currentPageDisplay) {
+                    currentPageDisplay.textContent = currentPage;
+                }
+                
+                // Mettre à jour les boutons précédent/suivant
+                const prevBtn = document.getElementById('prev-btn');
+                const nextBtn = document.getElementById('next-btn');
+                
+                if (prevBtn) {
+                    if (currentPage <= 1) {
+                        prevBtn.classList.add('pointer-events-none', 'opacity-50');
+                    } else {
+                        prevBtn.classList.remove('pointer-events-none', 'opacity-50');
+                    }
+                }
+                
+                if (nextBtn) {
+                    if (currentPage >= totalPages) {
+                        nextBtn.classList.add('pointer-events-none', 'opacity-50');
+                    } else {
+                        nextBtn.classList.remove('pointer-events-none', 'opacity-50');
+                    }
+                }
+                
+                // Générer dynamiquement les numéros de page autour de la page courante
+                const pageNumbersContainer = document.getElementById('page-numbers');
+                if (!pageNumbersContainer) return;
+                
+                let pageNumbersHtml = '';
+                const startPage = Math.max(1, currentPage - 2);
+                const endPage = Math.min(totalPages, currentPage + 2);
+                
+                // Afficher la première page si on n'est pas au début
+                if (startPage > 1) {
+                    pageNumbersHtml += '<button type="button" onclick="showPage(1)" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">1</button>';
+                    if (startPage > 2) {
+                        pageNumbersHtml += '<span class="px-2 text-gray-500">...</span>';
+                    }
+                }
+                
+                // Afficher les pages autour de la page courante
+                for (let i = startPage; i <= endPage; i++) {
+                    if (i === currentPage) {
+                        pageNumbersHtml += '<span class="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md">' + i + '</span>';
+                    } else {
+                        pageNumbersHtml += '<button type="button" onclick="showPage(' + i + ')" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">' + i + '</button>';
+                    }
+                }
+                
+                // Afficher la dernière page si on n'est pas à la fin
+                if (endPage < totalPages) {
+                    if (endPage < totalPages - 1) {
+                        pageNumbersHtml += '<span class="px-2 text-gray-500">...</span>';
+                    }
+                    pageNumbersHtml += '<button type="button" onclick="showPage(' + totalPages + ')" class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors">' + totalPages + '</button>';
+                }
+                
+                pageNumbersContainer.innerHTML = pageNumbersHtml;
+            }
+            
+            // Initialiser l'affichage au chargement de la page
+            document.addEventListener('DOMContentLoaded', function() {
+                showPage(1);
+            });
         </script>
 
 HTML;

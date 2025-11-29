@@ -37,6 +37,17 @@ class StockTemplate {
                 </button>
             </form>
         </div>
+        
+        <!-- Champ de recherche -->
+        <div class="mb-6">
+            <div class="relative">
+                <input type="text" 
+                       id="product-search" 
+                       placeholder="Rechercher par nom de produit..." 
+                       class="w-full md:w-1/3 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+            </div>
+        </div>
 HTML;
 
         // Récupération sécurisée de la liste des produits (tableau vide si absente)
@@ -72,11 +83,17 @@ HTML;
 
         <!-- Script JavaScript pour gérer le clic sur les lignes du tableau -->
         <!-- Insère l'ID du produit dans le formulaire et le soumet automatiquement -->
+        <script src="/public/assets/js/table-search.js"></script>
         <script>
             function submitForm(productId) {
                 document.getElementById('productId').value = productId;
                 document.getElementById('product-form').submit();
             }
+            
+            // Initialisation de la recherche (recherche dans la première colonne : nom de produit)
+            document.addEventListener('DOMContentLoaded', function() {
+                initTableSearch('product-search', 'table', [0]);
+            });
         </script>
 
         HTML;

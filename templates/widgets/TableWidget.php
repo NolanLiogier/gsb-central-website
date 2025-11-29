@@ -61,10 +61,11 @@ HTML;
         // Génération du corps
         $html .= '<tbody class="bg-white divide-y divide-gray-200">';
         
-        if (empty($paginatedRows) && $totalItems === 0) {
+        if (empty($rows) && $totalItems === 0) {
             $html .= $this->generateEmptyState($colspan, $emptyMessage, $emptyIcon);
         } else {
-            $html .= $this->generateRows($paginatedRows, $headers, $rowCallback);
+            // Générer toutes les lignes avec pagination CSS pour permettre la recherche sur toutes les données
+            $html .= $this->generateRowsWithPagination($rows, $headers, $rowCallback, $itemsPerPage, $currentPage);
         }
         
         $html .= <<<HTML
@@ -108,6 +109,144 @@ HTML;
         $html .= '</tr></thead>';
         
         return $html;
+    }
+
+    /**
+     * Génère les lignes du tableau avec pagination CSS pour permettre la recherche sur toutes les données.
+     * 
+     * Génère toutes les lignes mais les masque avec CSS selon la page courante.
+     * Permet au JavaScript de rechercher dans toutes les lignes.
+     * 
+     * @param array $rows Toutes les lignes à générer.
+     * @param array $headers En-têtes pour déterminer le nombre de colonnes.
+     * @param callable|null $rowCallback Callback pour personnaliser le rendu des lignes.
+     * @param int $itemsPerPage Nombre d'éléments par page.
+     * @param int $currentPage Page courante.
+     * @return string HTML des lignes.
+     */
+    private function generateRowsWithPagination(array $rows, array $headers, ?callable $rowCallback, int $itemsPerPage, int $currentPage): string {
+        $html = '';
+        $rowIndex = 0;
+        
+        foreach ($rows as $row) {
+            // Étape 1 : Calculer sur quelle page se trouve cette ligne
+            // Exemple : si itemsPerPage = 10, la ligne 0-9 est page 1, 10-19 est page 2, etc.
+            $rowPage = floor($rowIndex / $itemsPerPage) + 1;
+            
+            // Étape 2 : Déterminer si cette ligne doit être masquée
+            // Si la ligne n'est pas sur la page courante, on la masque avec la classe 'hidden'
+            $isOnCurrentPage = ($rowPage == $currentPage);
+            $hiddenClass = $isOnCurrentPage ? '' : 'hidden';
+            
+            // Étape 3 : Préparer les attributs data pour le JavaScript
+            $dataPage = htmlspecialchars($rowPage);
+            $dataOriginalDisplay = $isOnCurrentPage ? '' : 'none';
+            
+            // Étape 4 : Générer le HTML de la ligne
+            if ($rowCallback !== null) {
+                // Cas 1 : Utilisation d'un callback (ligne générée par le template)
+                $rowHtml = call_user_func($rowCallback, $row);
+                
+                // Étape 5 : Modifier le HTML généré pour ajouter les attributs de pagination
+                // On cherche la balise <tr> et on ajoute les classes et attributs nécessaires
+                $rowHtml = $this->addPaginationAttributesToRow($rowHtml, $hiddenClass, $dataPage, $dataOriginalDisplay);
+                
+                $html .= $rowHtml;
+            } else {
+                // Cas 2 : Génération automatique (sans callback)
+                // On construit directement le HTML avec tous les attributs
+                $html .= '<tr class="hover:bg-gray-50 transition-colors table-row-pagination ' . $hiddenClass . '" ';
+                $html .= 'data-page="' . $dataPage . '" ';
+                $html .= 'data-original-display="' . $dataOriginalDisplay . '">';
+                
+                // Générer les cellules
+                foreach ($row as $cell) {
+                    $cellContent = is_array($cell) ? ($cell['content'] ?? '') : $cell;
+                    $cellClass = is_array($cell) ? ($cell['class'] ?? 'px-6 py-4 whitespace-nowrap') : 'px-6 py-4 whitespace-nowrap';
+                    
+                    $cellContentEscaped = htmlspecialchars($cellContent);
+                    $cellClassEscaped = htmlspecialchars($cellClass);
+                    
+                    $html .= "<td class=\"{$cellClassEscaped}\"><div class=\"text-sm text-gray-900\">{$cellContentEscaped}</div></td>";
+                }
+                
+                $html .= '</tr>';
+            }
+            
+            $rowIndex++;
+        }
+        
+        return $html;
+    }
+
+    /**
+     * Ajoute les attributs de pagination à une balise <tr> générée par un callback.
+     * 
+     * Prend le HTML d'une ligne générée par un template et y ajoute :
+     * - La classe 'table-row-pagination' pour l'identifier
+     * - La classe 'hidden' si la ligne n'est pas sur la page courante
+     * - L'attribut data-page avec le numéro de page
+     * - L'attribut data-original-display pour restaurer l'état initial
+     * 
+     * @param string $rowHtml HTML de la ligne générée par le callback.
+     * @param string $hiddenClass Classe 'hidden' ou chaîne vide.
+     * @param string $dataPage Numéro de page (échappé).
+     * @param string $dataOriginalDisplay Valeur pour data-original-display.
+     * @return string HTML modifié avec les attributs de pagination.
+     */
+    private function addPaginationAttributesToRow(string $rowHtml, string $hiddenClass, string $dataPage, string $dataOriginalDisplay): string {
+        // Chercher la position de la balise <tr>
+        $trStartPos = strpos($rowHtml, '<tr');
+        
+        if ($trStartPos === false) {
+            // Si on ne trouve pas <tr>, retourner tel quel (ne devrait pas arriver)
+            return $rowHtml;
+        }
+        
+        // Trouver où se termine la balise <tr> (après les attributs, avant le >)
+        $trEndPos = strpos($rowHtml, '>', $trStartPos);
+        
+        if ($trEndPos === false) {
+            // Si on ne trouve pas le >, retourner tel quel
+            return $rowHtml;
+        }
+        
+        // Extraire la partie avant <tr>, la balise <tr> elle-même, et la partie après
+        $beforeTr = substr($rowHtml, 0, $trStartPos);
+        $trTag = substr($rowHtml, $trStartPos, $trEndPos - $trStartPos + 1);
+        $afterTr = substr($rowHtml, $trEndPos + 1);
+        
+        // Modifier la balise <tr> pour ajouter les attributs
+        // Si la balise contient déjà class="...", on ajoute nos classes
+        if (preg_match('/class\s*=\s*["\']([^"\']*)["\']/', $trTag, $matches)) {
+            // Il y a déjà un attribut class, on ajoute nos classes
+            $existingClasses = $matches[1];
+            $newClasses = trim($existingClasses . ' table-row-pagination ' . $hiddenClass);
+            
+            // Remplacer l'ancien class par le nouveau
+            $trTag = preg_replace(
+                '/class\s*=\s*["\'][^"\']*["\']/',
+                'class="' . htmlspecialchars($newClasses) . '"',
+                $trTag
+            );
+        } else {
+            // Il n'y a pas d'attribut class, on l'ajoute
+            $newClasses = 'table-row-pagination ' . $hiddenClass;
+            // Insérer class="..." juste avant le >
+            $trTag = str_replace('>', ' class="' . htmlspecialchars($newClasses) . '">', $trTag);
+        }
+        
+        // Ajouter les attributs data-page et data-original-display
+        // Vérifier s'ils existent déjà
+        if (strpos($trTag, 'data-page=') === false) {
+            $trTag = str_replace('>', ' data-page="' . $dataPage . '">', $trTag);
+        }
+        if (strpos($trTag, 'data-original-display=') === false) {
+            $trTag = str_replace('>', ' data-original-display="' . $dataOriginalDisplay . '">', $trTag);
+        }
+        
+        // Reconstruire le HTML complet
+        return $beforeTr . $trTag . $afterTr;
     }
 
     /**

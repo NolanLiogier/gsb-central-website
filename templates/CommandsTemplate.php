@@ -40,8 +40,17 @@ HTML;
         </div>
 HTML;
         
-        // Affichage du champ de recherche uniquement pour commerciaux et logisticiens
+        // Affichage du champ de recherche pour tous les utilisateurs
+        $searchPlaceholder = '';
         if ($userFunctionId == 1 || $userFunctionId == 3) {
+            // Commerciaux et logisticiens : recherche par client, entreprise ou date
+            $searchPlaceholder = 'Rechercher par client, entreprise ou date...';
+        } elseif ($userFunctionId == 2) {
+            // Clients : recherche par date ou statut
+            $searchPlaceholder = 'Rechercher par date ou statut...';
+        }
+        
+        if ($searchPlaceholder) {
             $commandContent .= <<<HTML
         
         <!-- Champ de recherche -->
@@ -49,7 +58,7 @@ HTML;
             <div class="relative">
                 <input type="text" 
                        id="command-search" 
-                       placeholder="Rechercher par client ou entreprise..." 
+                       placeholder="{$searchPlaceholder}" 
                        class="w-full md:w-1/3 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                 <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
             </div>
@@ -79,15 +88,28 @@ HTML;
         
         $commandContent .= $tableHtml;
         
-        // Script de recherche pour les commandes (uniquement pour commerciaux et logisticiens)
-        if ($userFunctionId == 1 || $userFunctionId == 3) {
+        // Script de recherche pour les commandes (pour tous les utilisateurs)
+        if ($searchPlaceholder) {
+            // Déterminer les colonnes à rechercher selon le rôle
+            $searchColumns = [];
+            if ($userFunctionId == 1 || $userFunctionId == 3) {
+                // Commerciaux et logisticiens : recherche dans client [0], entreprise [1], date de livraison [2] et date de création [3]
+                $searchColumns = [0, 1, 2, 3];
+            } elseif ($userFunctionId == 2) {
+                // Clients : recherche dans date de livraison [0], date de création [1] et statut [2]
+                $searchColumns = [0, 1, 2];
+            }
+            
+            $searchColumnsJson = json_encode($searchColumns, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+            
             $commandContent .= <<<HTML
 
         <script src="/public/assets/js/table-search.js"></script>
         <script>
-            // Initialisation de la recherche (recherche dans les colonnes client [0] et entreprise [1])
+            // Initialisation de la recherche selon le rôle
             document.addEventListener('DOMContentLoaded', function() {
-                initTableSearch('command-search', 'table', [0, 1]);
+                const searchColumns = {$searchColumnsJson};
+                initTableSearch('command-search', 'table', searchColumns);
             });
         </script>
 HTML;

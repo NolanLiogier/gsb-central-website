@@ -14,24 +14,6 @@ use PDOException;
  * en stock depuis la base de données.
  */
 class StockRepository {
-    /**
-     * Connexion PDO à la base de données.
-     * Réutilisée pour toutes les opérations de ce repository.
-     * 
-     * @var PDO
-     */
-    private PDO $connection;
-
-    /**
-     * Initialise le repository en établissant la connexion à la base de données.
-     * La connexion est établie via la classe Database qui centralise la configuration.
-     * 
-     * @return void
-     */
-    public function __construct() {
-        $database = new Database();
-        $this->connection = $database->getConnection();
-    }
 
     /**
      * Récupère tous les produits en stock.
@@ -42,9 +24,13 @@ class StockRepository {
      * @return array Liste des produits avec leurs informations (product_id, product_name, quantity, price).
      */
     public function getAllProducts(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -53,12 +39,21 @@ class StockRepository {
                       FROM stock 
                       ORDER BY product_name";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }
@@ -73,9 +68,13 @@ class StockRepository {
      * @return array Données du produit avec product_id, product_name, quantity, price, ou tableau vide.
      */
     public function getProductById(int $productId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -83,16 +82,23 @@ class StockRepository {
                       FROM stock 
                       WHERE product_id = :product_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
             $stmt->execute();
             
             // fetch() retourne false si aucun résultat, convertir en tableau vide
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return $result ?: [];
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }
@@ -109,9 +115,13 @@ class StockRepository {
      * @return bool True si la mise à jour a réussi, false en cas d'erreur ou de données invalides.
      */
     public function updateProduct(array $productData): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -138,7 +148,7 @@ class StockRepository {
                           price = :price
                       WHERE product_id = :product_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':product_id', $productData['product_id'], PDO::PARAM_INT);
@@ -146,9 +156,18 @@ class StockRepository {
             $stmt->bindParam(':quantity', $productData['quantity'], PDO::PARAM_INT);
             $stmt->bindParam(':price', $productData['price'], PDO::PARAM_STR);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }
@@ -164,9 +183,13 @@ class StockRepository {
      * @return bool True si l'insertion a réussi, false en cas d'erreur ou de données invalides.
      */
     public function addProduct(array $productData): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -190,16 +213,25 @@ class StockRepository {
             $query = "INSERT INTO stock (product_name, quantity, price) 
                       VALUES (:product_name, :quantity, :price)";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':product_name', $productData['product_name'], PDO::PARAM_STR);
             $stmt->bindParam(':quantity', $productData['quantity'], PDO::PARAM_INT);
             $stmt->bindParam(':price', $productData['price'], PDO::PARAM_STR);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }
@@ -216,21 +248,34 @@ class StockRepository {
      * @return bool True si la suppression a réussi, false en cas d'erreur.
      */
     public function deleteProduct(int $productId): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
             // Préparation de la requête DELETE avec paramètre nommé pour éviter les injections SQL
             $query = "DELETE FROM stock WHERE product_id = :product_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }

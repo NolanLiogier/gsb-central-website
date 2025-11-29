@@ -15,13 +15,6 @@ use App\Helpers\UserService;
  */
 class DashboardRepository {
     /**
-     * Connexion à la base de données.
-     * 
-     * @var PDO|null
-     */
-    private ?PDO $conn = null;
-
-    /**
      * Service utilisateur pour la récupération des données utilisateur.
      * 
      * @var UserService
@@ -29,14 +22,12 @@ class DashboardRepository {
     private UserService $userService;
 
     /**
-     * Initialise la connexion à la base de données.
+     * Initialise le repository.
      * 
      * @return void
      */
     public function __construct()
     {
-        $database = new Database();
-        $this->conn = $database->getConnection();
         $this->userService = new UserService();
     }
 
@@ -183,14 +174,30 @@ class DashboardRepository {
      * @return int Nombre de commandes.
      */
     private function getClientTotalOrders(int $userId): int {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return 0;
+            }
+            
             $query = "SELECT COUNT(*) as total FROM commands WHERE fk_user_id = :userId";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return (int)($result['total'] ?? 0);
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return 0;
         }
     }
@@ -205,7 +212,15 @@ class DashboardRepository {
      * @return array Liste des produits avec leur quantité commandée.
      */
     private function getClientMostOrderedProducts(int $userId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         s.product_id,
                         s.product_name,
@@ -218,11 +233,20 @@ class DashboardRepository {
                       HAVING total_ordered > 0
                       ORDER BY total_ordered DESC
                       LIMIT 5";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -237,13 +261,25 @@ class DashboardRepository {
      * @return array Tableau avec les compteurs par statut.
      */
     private function getClientOrdersByStatus(int $userId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [
+                    'inProgress' => 0,
+                    'shipped' => 0,
+                    'delivered' => 0,
+                ];
+            }
+            
             // Commandes en cours (en attente = 3 ou validé = 1)
             $inProgressQuery = "SELECT COUNT(*) as total 
                                FROM commands 
                                WHERE fk_user_id = :userId 
                                AND fk_status_id IN (1, 3)";
-            $stmt = $this->conn->prepare($inProgressQuery);
+            $stmt = $conn->prepare($inProgressQuery);
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->execute();
             $inProgressResult = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -253,7 +289,7 @@ class DashboardRepository {
                             FROM commands 
                             WHERE fk_user_id = :userId 
                             AND fk_status_id = 2";
-            $stmt = $this->conn->prepare($shippedQuery);
+            $stmt = $conn->prepare($shippedQuery);
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->execute();
             $shippedResult = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -261,12 +297,21 @@ class DashboardRepository {
             // Pour cet indicateur, on considère les commandes envoyées comme livrées
             // (la table n'a pas de statut "livré" séparé)
             
-            return [
+            $result = [
                 'inProgress' => (int)($inProgressResult['total'] ?? 0),
                 'shipped' => (int)($shippedResult['total'] ?? 0),
                 'delivered' => (int)($shippedResult['total'] ?? 0), // Même valeur que shipped
             ];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [
                 'inProgress' => 0,
                 'shipped' => 0,
@@ -284,19 +329,35 @@ class DashboardRepository {
      * @return float Montant total dépensé.
      */
     private function getClientTotalAmountSpent(int $userId): float {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return 0.0;
+            }
+            
             $query = "SELECT COALESCE(SUM(s.price), 0) as total_amount
                       FROM commands c
                       INNER JOIN command_details cd ON c.command_id = cd.fk_command_id
                       INNER JOIN stock s ON cd.fk_product_id = s.product_id
                       WHERE c.fk_user_id = :userId";
             
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return round((float)($result['total_amount'] ?? 0), 2);
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return 0.0;
         }
     }
@@ -308,7 +369,15 @@ class DashboardRepository {
      * @return array Données du meilleur client.
      */
     private function getBestClient(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         c.company_name,
                         COUNT(cm.command_id) as total_orders
@@ -319,11 +388,20 @@ class DashboardRepository {
                       GROUP BY c.company_id, c.company_name
                       ORDER BY total_orders DESC
                       LIMIT 1";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -335,7 +413,15 @@ class DashboardRepository {
      * @return array Données du meilleur produit.
      */
     private function getBestProduct(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         s.product_name,
                         COUNT(cd.details_id) as total_sold
@@ -348,11 +434,20 @@ class DashboardRepository {
                       GROUP BY s.product_id, s.product_name
                       ORDER BY total_sold DESC
                       LIMIT 1";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -366,7 +461,19 @@ class DashboardRepository {
      * @return array Données de l'objectif mensuel (actuel et objectif).
      */
     private function getMonthlyObjective(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [
+                    'current' => 0,
+                    'objective' => 10,
+                    'percentage' => 0.0
+                ];
+            }
+            
             $query = "SELECT COUNT(cm.command_id) as current_month_orders
                       FROM commands cm
                       INNER JOIN users u ON cm.fk_user_id = u.user_id
@@ -374,7 +481,7 @@ class DashboardRepository {
                       WHERE c.fk_salesman_id = :salesmanId
                       AND MONTH(cm.created_at) = MONTH(CURRENT_DATE())
                       AND YEAR(cm.created_at) = YEAR(CURRENT_DATE())";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -382,12 +489,21 @@ class DashboardRepository {
             $current = (int)($result['current_month_orders'] ?? 0);
             $objective = 10; // Objectif fixe de 10 commandes par mois
 
-            return [
+            $returnValue = [
                 'current' => $current,
                 'objective' => $objective,
                 'percentage' => round(($current / $objective) * 100, 1)
             ];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $returnValue;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur, retourner des valeurs par défaut pour éviter les erreurs d'affichage
             return [
                 'current' => 0,
@@ -405,13 +521,29 @@ class DashboardRepository {
      * @return int Nombre de commandes envoyées.
      */
     private function getSentOrdersCount(): int {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return 0;
+            }
+            
             $query = "SELECT COUNT(*) as total FROM commands WHERE fk_status_id = 2";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return (int)($result['total'] ?? 0);
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return 0;
         }
     }
@@ -423,7 +555,15 @@ class DashboardRepository {
      * @return array Statistiques mensuelles (orders).
      */
     private function getMonthlyStats(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return ['orders' => 0];
+            }
+            
             $query = "SELECT COUNT(cm.command_id) as orders
                       FROM commands cm
                       INNER JOIN users u ON cm.fk_user_id = u.user_id
@@ -431,15 +571,24 @@ class DashboardRepository {
                       WHERE c.fk_salesman_id = :salesmanId
                       AND MONTH(cm.created_at) = MONTH(CURRENT_DATE())
                       AND YEAR(cm.created_at) = YEAR(CURRENT_DATE())";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return [
+            $returnValue = [
                 'orders' => (int)($result['orders'] ?? 0)
             ];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $returnValue;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return ['orders' => 0];
         }
     }
@@ -453,7 +602,20 @@ class DashboardRepository {
      * @return array Statistiques de CA (revenue, previousRevenue, evolution, averageBasket).
      */
     private function getRevenueStats(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [
+                    'revenue' => 0,
+                    'previousRevenue' => 0,
+                    'evolution' => 0,
+                    'averageBasket' => 0
+                ];
+            }
+            
             // CA du mois actuel
             $currentMonthQuery = "SELECT 
                                     COALESCE(SUM(s.price), 0) as revenue,
@@ -467,7 +629,7 @@ class DashboardRepository {
                                   AND MONTH(cm.created_at) = MONTH(CURRENT_DATE())
                                   AND YEAR(cm.created_at) = YEAR(CURRENT_DATE())";
             
-            $stmt = $this->conn->prepare($currentMonthQuery);
+            $stmt = $conn->prepare($currentMonthQuery);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
             $current = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -486,7 +648,7 @@ class DashboardRepository {
                                    AND MONTH(cm.created_at) = MONTH(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))
                                    AND YEAR(cm.created_at) = YEAR(DATE_SUB(CURRENT_DATE(), INTERVAL 1 MONTH))";
             
-            $stmt = $this->conn->prepare($previousMonthQuery);
+            $stmt = $conn->prepare($previousMonthQuery);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
             $previous = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -504,13 +666,22 @@ class DashboardRepository {
             // Panier moyen
             $averageBasket = $ordersCount > 0 ? round($currentRevenue / $ordersCount, 2) : 0;
             
-            return [
+            $returnValue = [
                 'revenue' => $currentRevenue,
                 'previousRevenue' => $previousRevenue,
                 'evolution' => $evolution,
                 'averageBasket' => $averageBasket
             ];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $returnValue;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [
                 'revenue' => 0,
                 'previousRevenue' => 0,
@@ -527,7 +698,15 @@ class DashboardRepository {
      * @return array Liste des 5 meilleurs clients avec leur CA.
      */
     private function getTopClientsByRevenue(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         c.company_name,
                         COALESCE(SUM(s.price), 0) as revenue,
@@ -542,11 +721,20 @@ class DashboardRepository {
                       HAVING revenue > 0
                       ORDER BY revenue DESC
                       LIMIT 5";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -558,7 +746,15 @@ class DashboardRepository {
      * @return array Liste des 5 produits les plus vendus.
      */
     private function getTopProductsSold(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         s.product_name,
                         COUNT(cd.details_id) as total_sold,
@@ -572,11 +768,20 @@ class DashboardRepository {
                       GROUP BY s.product_id, s.product_name
                       ORDER BY total_sold DESC
                       LIMIT 5";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -590,7 +795,15 @@ class DashboardRepository {
      * @return array Données d'évolution avec mois et CA.
      */
     private function getRevenueEvolution(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         DATE_FORMAT(cm.created_at, '%Y-%m') as month,
                         COALESCE(SUM(s.price), 0) as revenue
@@ -603,11 +816,20 @@ class DashboardRepository {
                       AND cm.created_at >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 MONTH)
                       GROUP BY DATE_FORMAT(cm.created_at, '%Y-%m')
                       ORDER BY month ASC";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -620,28 +842,49 @@ class DashboardRepository {
      * @return array Tableau avec les compteurs par statut.
      */
     private function getOrdersByStatus(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [
+                    'toPrepare' => 0,
+                    'shipped' => 0,
+                    'delivered' => 0,
+                ];
+            }
+            
             // Commandes à préparer (validé = 1)
             $toPrepareQuery = "SELECT COUNT(*) as total FROM commands WHERE fk_status_id = 1";
-            $stmt = $this->conn->prepare($toPrepareQuery);
+            $stmt = $conn->prepare($toPrepareQuery);
             $stmt->execute();
             $toPrepareResult = $stmt->fetch(PDO::FETCH_ASSOC);
             
             // Commandes envoyées (envoyé = 2)
             $shippedQuery = "SELECT COUNT(*) as total FROM commands WHERE fk_status_id = 2";
-            $stmt = $this->conn->prepare($shippedQuery);
+            $stmt = $conn->prepare($shippedQuery);
             $stmt->execute();
             $shippedResult = $stmt->fetch(PDO::FETCH_ASSOC);
             
             // Pour cet indicateur, on considère les commandes envoyées comme livrées
             // (la table n'a pas de statut "livré" séparé)
             
-            return [
+            $result = [
                 'toPrepare' => (int)($toPrepareResult['total'] ?? 0),
                 'shipped' => (int)($shippedResult['total'] ?? 0),
                 'delivered' => (int)($shippedResult['total'] ?? 0), // Même valeur que shipped
             ];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [
                 'toPrepare' => 0,
                 'shipped' => 0,
@@ -659,7 +902,15 @@ class DashboardRepository {
      * @return float Temps moyen en heures (ou 0 si aucune donnée).
      */
     private function getAverageProcessingTime(): float {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return 0.0;
+            }
+            
             // On utilise la différence entre created_at et delivery_date pour les commandes envoyées
             // comme approximation du temps de traitement
             $query = "SELECT 
@@ -667,12 +918,21 @@ class DashboardRepository {
                       FROM commands c
                       WHERE c.fk_status_id = 2";
             
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return round((float)($result['avg_hours'] ?? 0), 1);
+            $returnValue = round((float)($result['avg_hours'] ?? 0), 1);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $returnValue;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return 0.0;
         }
     }
@@ -685,7 +945,15 @@ class DashboardRepository {
      * @return array Liste des produits avec faible stock.
      */
     private function getLowStockProducts(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $threshold = 20; // Seuil de stock bas
             $query = "SELECT 
                         product_id,
@@ -697,11 +965,20 @@ class DashboardRepository {
                       ORDER BY quantity ASC
                       LIMIT 5";
             
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':threshold', $threshold, PDO::PARAM_INT);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -714,13 +991,31 @@ class DashboardRepository {
      * @return float Valeur totale du stock.
      */
     private function getTotalStockValue(): float {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return 0.0;
+            }
+            
             $query = "SELECT SUM(quantity * price) as total_value FROM stock";
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return round((float)($result['total_value'] ?? 0), 2);
+            
+            $returnValue = round((float)($result['total_value'] ?? 0), 2);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $returnValue;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return 0.0;
         }
     }
@@ -734,7 +1029,15 @@ class DashboardRepository {
      * @return array Liste des produits avec leur nombre de sorties.
      */
     private function getStockRotation(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT 
                         s.product_id,
                         s.product_name,
@@ -746,10 +1049,19 @@ class DashboardRepository {
                       ORDER BY exit_count DESC
                       LIMIT 5";
             
-            $stmt = $this->conn->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
-            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }

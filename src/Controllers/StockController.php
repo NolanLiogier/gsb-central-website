@@ -92,7 +92,7 @@ class StockController {
         $user = $this->userService->getCurrentUser();
         
         if (empty($user)) {
-            $this->router->getRoute('/Login');
+            $this->router->redirect('/Login');
             exit;
         }
         
@@ -172,7 +172,7 @@ class StockController {
         // Vérification que le produit existe
         if (empty($datas)) {
             $this->statusMessageService->setMessage('Produit introuvable.', 'error');
-            $this->router->getRoute('/Stock');
+            $this->router->redirect('/Stock');
             exit;
         }
         
@@ -219,13 +219,13 @@ class StockController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$createStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la création du produit.', 'error');
-            $this->router->getRoute('/Stock');
+            $this->router->redirect('/Stock');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des produits
         $this->statusMessageService->setMessage('Le produit a été créé avec succès.', 'success');
-        $this->router->getRoute('/Stock');
+        $this->router->redirect('/Stock');
         exit;
     }
 
@@ -262,7 +262,7 @@ class StockController {
 
         // Succès : message de confirmation et redirection vers la liste des produits
         $this->statusMessageService->setMessage('Les informations du produit ont été mises à jour avec succès.', 'success');
-        $this->router->getRoute('/Stock');
+        $this->router->redirect('/Stock');
         exit;
     }
 
@@ -282,13 +282,13 @@ class StockController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$deleteStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la suppression du produit.', 'error');
-            $this->router->getRoute('/Stock');
+            $this->router->redirect('/Stock');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des produits
         $this->statusMessageService->setMessage('Le produit a été supprimé avec succès.', 'success');
-        $this->router->getRoute('/Stock');
+        $this->router->redirect('/Stock');
         exit;
     }
 }

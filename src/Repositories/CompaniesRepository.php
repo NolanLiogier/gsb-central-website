@@ -14,24 +14,6 @@ use PDOException;
  * leurs secteurs et leurs commerciaux associés depuis la base de données.
  */
 class CompaniesRepository {
-    /**
-     * Connexion PDO à la base de données.
-     * Réutilisée pour toutes les opérations de ce repository.
-     * 
-     * @var PDO
-     */
-    private PDO $connection;
-
-    /**
-     * Initialise le repository en établissant la connexion à la base de données.
-     * La connexion est établie via la classe Database qui centralise la configuration.
-     * 
-     * @return void
-     */
-    public function __construct() {
-        $database = new Database();
-        $this->connection = $database->getConnection();
-    }
 
     /**
      * Récupère les données complètes d'une entreprise spécifique.
@@ -44,9 +26,13 @@ class CompaniesRepository {
      * @return array Données de l'entreprise avec secteurs et commerciaux, ou tableau vide.
      */
     public function getCompanyById(int $companyId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -61,16 +47,23 @@ class CompaniesRepository {
                       LEFT JOIN users u ON c.fk_salesman_id = u.user_id
                       WHERE c.company_id = :company_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':company_id', $companyId, PDO::PARAM_INT);
             $stmt->execute();
             
             // fetch() retourne false si aucun résultat, convertir en tableau vide
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return $result ?: [];
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }
@@ -86,8 +79,12 @@ class CompaniesRepository {
      * @return array Liste des entreprises assignées au commercial et secteurs.
      */
     public function getCompaniesBySalesman(int $salesmanId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
-            if (!$this->connection) {
+            if (!$conn) {
                 return [
                     'companies' => [],
                     'sectors' => []
@@ -105,7 +102,7 @@ class CompaniesRepository {
                       WHERE c.fk_salesman_id = :salesman_id
                       ORDER BY c.company_name";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
             
@@ -120,12 +117,21 @@ class CompaniesRepository {
             }
             sort($sectors);
             
-            return [
+            $result = [
                 'companies' => $companies,
                 'sectors' => $sectors
             ];
             
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
+            
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [
                 'companies' => [],
                 'sectors' => []
@@ -142,19 +148,32 @@ class CompaniesRepository {
      * @return array Liste des secteurs avec ID et nom, triés par nom.
      */
     public function getSectors(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
             // Ordre alphabétique pour faciliter la sélection par l'utilisateur
             $query = "SELECT sector_id, sector_name FROM sectors ORDER BY sector_name";
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -169,8 +188,12 @@ class CompaniesRepository {
      * @return array Liste des commerciaux avec ID, prénom et nom, triés par nom et prénom.
      */
     public function getSalesmen(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -180,12 +203,21 @@ class CompaniesRepository {
                       FROM users u
                       WHERE u.fk_function_id = 1
                       ORDER BY u.lastname, u.firstname";
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -201,9 +233,13 @@ class CompaniesRepository {
      * @return bool True si la mise à jour a réussi, false en cas d'erreur ou de données invalides.
      */
     public function updateCompany(array $companyData): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -248,7 +284,7 @@ class CompaniesRepository {
                           WHERE company_id = :company_id";
             }
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':company_id', $companyData['company_id'], PDO::PARAM_INT);
@@ -267,9 +303,18 @@ class CompaniesRepository {
                 $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
             }
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }
@@ -286,9 +331,13 @@ class CompaniesRepository {
      * @return bool True si l'insertion a réussi, false en cas d'erreur ou de données invalides.
      */
     public function addCompany(array $companyData): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -313,7 +362,7 @@ class CompaniesRepository {
             $query = "INSERT INTO companies (company_name, siret, siren, delivery_address, fk_sector_id, fk_salesman_id) 
                       VALUES (:company_name, :siret, :siren, :delivery_address, :sector_id, :salesman_id)";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Gestion du commercial : valeur nullable (peut être null si non assigné)
             $salesmanId = !empty($companyData['salesman']) ? $companyData['salesman'] : null;
@@ -328,9 +377,18 @@ class CompaniesRepository {
             $stmt->bindParam(':sector_id', $companyData['sector'], PDO::PARAM_INT);
             $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }
@@ -347,21 +405,34 @@ class CompaniesRepository {
      * @return bool True si la suppression a réussi, false en cas d'erreur.
      */
     public function deleteCompany(int $companyId): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
             // Préparation de la requête DELETE avec paramètre nommé pour éviter les injections SQL
             $query = "DELETE FROM companies WHERE company_id = :company_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':company_id', $companyId, PDO::PARAM_INT);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }

@@ -16,26 +16,6 @@ use PDOException;
 class UserRepository
 {
     /**
-     * Connexion PDO à la base de données.
-     * Réutilisée pour toutes les opérations de ce repository.
-     * 
-     * @var PDO|null
-     */
-    private ?PDO $conn = null;
-
-    /**
-     * Initialise le repository en établissant la connexion à la base de données.
-     * La connexion est établie via la classe Database qui centralise la configuration.
-     * Utilise la méthode statique pour éviter les problèmes avec les constructeurs privés.
-     * 
-     * @return void
-     */
-    public function __construct()
-    {
-        $this->conn = Database::getStaticConnection();
-    }
-
-    /**
      * Récupère les données complètes d'un utilisateur par son adresse email.
      * 
      * Utilisé lors de l'authentification pour vérifier l'existence de l'utilisateur
@@ -48,9 +28,13 @@ class UserRepository
      */
     public function getUserByEmail(string $email): array
     {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->conn) {
+            if (!$conn) {
                 return [];
             }
 
@@ -60,13 +44,21 @@ class UserRepository
                     FROM users u 
                     LEFT JOIN functions f ON u.fk_function_id = f.function_id 
                     WHERE u.email = :email";
-            $stmt = $this->conn->prepare($sql);
+            $stmt = $conn->prepare($sql);
             $stmt->execute(['email' => $email]);
             
             // ?? opérateur null coalescing pour retourner un tableau vide si fetch() retourne false
             $result = $stmt->fetch(PDO::FETCH_ASSOC) ?? [];
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return $result;
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }

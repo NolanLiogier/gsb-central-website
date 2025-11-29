@@ -13,24 +13,6 @@ use PDOException;
  * Fournit des méthodes pour récupérer les commandes des utilisateurs depuis la base de données.
  */
 class CommandRepository {
-    /**
-     * Connexion PDO à la base de données.
-     * Réutilisée pour toutes les opérations de ce repository.
-     * 
-     * @var PDO
-     */
-    private PDO $connection;
-
-    /**
-     * Initialise le repository en établissant la connexion à la base de données.
-     * La connexion est établie via la classe Database qui centralise la configuration.
-     * 
-     * @return void
-     */
-    public function __construct() {
-        $database = new Database();
-        $this->connection = $database->getConnection();
-    }
 
     /**
      * Récupère tous les statuts disponibles.
@@ -40,20 +22,33 @@ class CommandRepository {
      * @return array Liste des statuts avec status_id et status_name.
      */
     public function getAllStatuses(): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
             $query = "SELECT status_id, status_name FROM status ORDER BY status_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->execute();
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -70,9 +65,13 @@ class CommandRepository {
      * @return array Liste des commandes avec leurs informations et produits.
      */
     public function getCommandsByUserRole(array $user): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -122,7 +121,7 @@ class CommandRepository {
                 return [];
             }
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Bind des paramètres
             foreach ($params as $param => $value) {
@@ -137,9 +136,16 @@ class CommandRepository {
                 $command['products'] = $this->getCommandProducts($command['command_id']);
             }
             
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return $commands;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }
@@ -156,9 +162,13 @@ class CommandRepository {
      * @return array Liste des commandes avec leurs informations et produits.
      */
     public function getCommandsByUserId(int $userId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -169,7 +179,7 @@ class CommandRepository {
                       WHERE c.fk_user_id = :user_id
                       ORDER BY c.created_at DESC";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
             $stmt->execute();
             
@@ -180,9 +190,16 @@ class CommandRepository {
                 $command['products'] = $this->getCommandProducts($command['command_id']);
             }
             
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return $commands;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }
@@ -195,20 +212,37 @@ class CommandRepository {
      * @return array Liste des produits avec leurs quantités.
      */
     private function getCommandProducts(int $commandId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return [];
+            }
+            
             $query = "SELECT st.product_id, st.product_name, st.price, COUNT(cd.details_id) as quantity
                       FROM command_details cd
                       JOIN stock st ON cd.fk_product_id = st.product_id
                       WHERE cd.fk_command_id = :command_id
                       GROUP BY st.product_id, st.product_name, st.price";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
             $stmt->execute();
             
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return [];
         }
     }
@@ -223,9 +257,13 @@ class CommandRepository {
      * @return array Données de la commande avec command_id, delivery_date, created_at, fk_status_id, fk_user_id, products, ou tableau vide.
      */
     public function getCommandById(int $commandId): array {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant la requête
-            if (!$this->connection) {
+            if (!$conn) {
                 return [];
             }
 
@@ -234,7 +272,7 @@ class CommandRepository {
                       LEFT JOIN status s ON c.fk_status_id = s.status_id
                       WHERE c.command_id = :command_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
             $stmt->execute();
             
@@ -246,9 +284,16 @@ class CommandRepository {
                 $result['products'] = $this->getCommandProducts($commandId);
             }
             
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return $result ?: [];
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // Retourner un tableau vide en cas d'erreur pour éviter les erreurs fatales
             return [];
         }
@@ -265,9 +310,13 @@ class CommandRepository {
      * @return bool True si la mise à jour a réussi, false en cas d'erreur ou de données invalides.
      */
     public function updateCommand(array $commandData, array $products = []): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -278,7 +327,7 @@ class CommandRepository {
             }
 
             // Début de la transaction pour assurer la cohérence des données
-            $this->connection->beginTransaction();
+            $conn->beginTransaction();
 
             // Préparation de la requête UPDATE avec paramètres nommés pour éviter les injections SQL
             $query = "UPDATE commands 
@@ -286,7 +335,7 @@ class CommandRepository {
                           fk_status_id = :fk_status_id
                       WHERE command_id = :command_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':command_id', $commandData['command_id'], PDO::PARAM_INT);
@@ -294,7 +343,9 @@ class CommandRepository {
             $stmt->bindParam(':fk_status_id', $commandData['fk_status_id'], PDO::PARAM_INT);
             
             if (!$stmt->execute()) {
-                $this->connection->rollBack();
+                $conn->rollBack();
+                $conn = null;
+                $database = null;
                 return false;
             }
 
@@ -302,18 +353,20 @@ class CommandRepository {
             if (!empty($products)) {
                 // Supprimer les anciens détails de la commande
                 $deleteQuery = "DELETE FROM command_details WHERE fk_command_id = :command_id";
-                $deleteStmt = $this->connection->prepare($deleteQuery);
+                $deleteStmt = $conn->prepare($deleteQuery);
                 $deleteStmt->bindParam(':command_id', $commandData['command_id'], PDO::PARAM_INT);
                 
                 if (!$deleteStmt->execute()) {
-                    $this->connection->rollBack();
+                    $conn->rollBack();
+                    $conn = null;
+                    $database = null;
                     return false;
                 }
 
                 // Insérer les nouveaux détails des produits
                 $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, created_at) 
                                 VALUES (:command_id, :product_id, NOW())";
-                $detailsStmt = $this->connection->prepare($detailsQuery);
+                $detailsStmt = $conn->prepare($detailsQuery);
 
                 foreach ($products as $productId => $productData) {
                     $quantity = (int)($productData['quantity'] ?? 0);
@@ -324,7 +377,9 @@ class CommandRepository {
                         $detailsStmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
                         
                         if (!$detailsStmt->execute()) {
-                            $this->connection->rollBack();
+                            $conn->rollBack();
+                            $conn = null;
+                            $database = null;
                             return false;
                         }
                     }
@@ -332,14 +387,22 @@ class CommandRepository {
             }
 
             // Validation de la transaction
-            $this->connection->commit();
+            $conn->commit();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return true;
             
         } catch (PDOException $e) {
             // En cas d'erreur, annulation de la transaction
-            if ($this->connection->inTransaction()) {
-                $this->connection->rollBack();
+            if ($conn && $conn->inTransaction()) {
+                $conn->rollBack();
             }
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return false;
         }
     }
@@ -356,9 +419,13 @@ class CommandRepository {
      * @return bool True si la création a réussi, false en cas d'erreur ou de données invalides.
      */
     public function addCommand(array $commandData, array $products = []): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -369,14 +436,14 @@ class CommandRepository {
             }
 
             // Début de la transaction pour assurer la cohérence des données
-            $this->connection->beginTransaction();
+            $conn->beginTransaction();
 
             // Préparation de la requête INSERT avec paramètres nommés pour éviter les injections SQL
             // Ajout du champ created_at avec la date/heure actuelle
             $query = "INSERT INTO commands (fk_user_id, delivery_date, created_at, fk_status_id) 
                       VALUES (:user_id, :delivery_date, NOW(), :fk_status_id)";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             
             // Bind des paramètres avec types appropriés pour éviter les injections et erreurs de type
             $stmt->bindParam(':user_id', $commandData['user_id'], PDO::PARAM_INT);
@@ -384,18 +451,20 @@ class CommandRepository {
             $stmt->bindParam(':fk_status_id', $commandData['fk_status_id'], PDO::PARAM_INT);
             
             if (!$stmt->execute()) {
-                $this->connection->rollBack();
+                $conn->rollBack();
+                $conn = null;
+                $database = null;
                 return false;
             }
 
             // Récupération de l'ID de la commande créée
-            $commandId = $this->connection->lastInsertId();
+            $commandId = $conn->lastInsertId();
 
             // Insertion des détails des produits dans command_details
             if (!empty($products)) {
                 $detailsQuery = "INSERT INTO command_details (fk_command_id, fk_product_id, created_at) 
                                 VALUES (:command_id, :product_id, NOW())";
-                $detailsStmt = $this->connection->prepare($detailsQuery);
+                $detailsStmt = $conn->prepare($detailsQuery);
 
                 foreach ($products as $productId => $productData) {
                     $quantity = (int)($productData['quantity'] ?? 0);
@@ -406,7 +475,9 @@ class CommandRepository {
                         $detailsStmt->bindParam(':product_id', $productId, PDO::PARAM_INT);
                         
                         if (!$detailsStmt->execute()) {
-                            $this->connection->rollBack();
+                            $conn->rollBack();
+                            $conn = null;
+                            $database = null;
                             return false;
                         }
                     }
@@ -414,14 +485,22 @@ class CommandRepository {
             }
 
             // Validation de la transaction
-            $this->connection->commit();
+            $conn->commit();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return true;
             
         } catch (PDOException $e) {
             // En cas d'erreur, annulation de la transaction
-            if ($this->connection->inTransaction()) {
-                $this->connection->rollBack();
+            if ($conn && $conn->inTransaction()) {
+                $conn->rollBack();
             }
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return false;
         }
     }
@@ -506,7 +585,15 @@ class CommandRepository {
      * @return bool True si la commande appartient à un client du commercial, false sinon.
      */
     private function isCommandFromSalesmanClient(int $salesmanId, int $commandId): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
+            if (!$conn) {
+                return false;
+            }
+            
             $query = "SELECT COUNT(*) as count
                       FROM commands c
                       JOIN users u ON c.fk_user_id = u.user_id
@@ -514,15 +601,23 @@ class CommandRepository {
                       WHERE c.command_id = :command_id 
                       AND comp.fk_salesman_id = :salesman_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
             $stmt->bindParam(':salesman_id', $salesmanId, PDO::PARAM_INT);
             $stmt->execute();
             
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
             return ($result['count'] ?? 0) > 0;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return false;
         }
     }
@@ -538,21 +633,34 @@ class CommandRepository {
      * @return bool True si la suppression a réussi, false en cas d'erreur.
      */
     public function deleteCommand(int $commandId): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
             // Vérification de la connexion avant toute opération
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
             // Préparation de la requête DELETE avec paramètre nommé pour éviter les injections SQL
             $query = "DELETE FROM commands WHERE command_id = :command_id";
             
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             // En cas d'erreur (contrainte DB, connexion perdue, etc.), retourner false
             return false;
         }
@@ -566,8 +674,12 @@ class CommandRepository {
      * @return bool True si la mise à jour a réussi, false en cas d'erreur.
      */
     public function updateCommandStatus(int $commandId, string $action): bool {
+        // Initialisation de la connexion à la base de données
+        $database = new Database();
+        $conn = $database->getConnection();
+        
         try {
-            if (!$this->connection) {
+            if (!$conn) {
                 return false;
             }
 
@@ -584,13 +696,22 @@ class CommandRepository {
             }
 
             $query = "UPDATE commands SET fk_status_id = :status_id WHERE command_id = :command_id";
-            $stmt = $this->connection->prepare($query);
+            $stmt = $conn->prepare($query);
             $stmt->bindParam(':status_id', $newStatusId, PDO::PARAM_INT);
             $stmt->bindParam(':command_id', $commandId, PDO::PARAM_INT);
             
-            return $stmt->execute();
+            $result = $stmt->execute();
+            
+            // Fermeture de la connexion
+            $conn = null;
+            $database = null;
+            
+            return $result;
             
         } catch (PDOException $e) {
+            // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
             return false;
         }
     }

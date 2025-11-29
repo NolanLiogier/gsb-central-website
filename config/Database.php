@@ -70,16 +70,4 @@ class Database
 
         return $this->conn;
     }
-
-    /**
-     * Méthode statique pour obtenir une connexion PDO sans instancier la classe.
-     * Utile lorsque le constructeur est privé (pattern singleton).
-     *
-     * @return PDO|null L'objet de connexion PDO, ou null si la connexion échoue.
-     */
-    public static function getStaticConnection(): ?PDO
-    {
-        $instance = new self();
-        return $instance->getConnection();
-    }
 }

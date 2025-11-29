@@ -101,7 +101,7 @@ class CommandController {
         $user = $this->userService->getCurrentUser();
         
         if (empty($user)) {
-            $this->router->getRoute('/Login');
+            $this->router->redirect('/Login');
             exit;
         }
         
@@ -226,7 +226,7 @@ class CommandController {
         // Vérification des permissions pour modifier la commande
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'modify')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
         
@@ -236,7 +236,7 @@ class CommandController {
         // Vérification que la commande existe
         if (empty($datas)) {
             $this->statusMessageService->setMessage('Commande introuvable.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
         
@@ -333,7 +333,7 @@ class CommandController {
             // Vérification des permissions
             if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'modify')) {
                 $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
-                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                $this->router->redirect('/Commands');
                 exit;
             }
             
@@ -341,7 +341,7 @@ class CommandController {
             $commandData = $this->commandRepository->getCommandById($commandId);
             if (empty($commandData)) {
                 $this->statusMessageService->setMessage('Commande introuvable.', 'error');
-                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                $this->router->redirect('/Commands');
                 exit;
             }
             
@@ -445,7 +445,7 @@ class CommandController {
             // Vérification des permissions
             if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'modify')) {
                 $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
-                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                $this->router->redirect('/Commands');
                 exit;
             }
             
@@ -453,7 +453,7 @@ class CommandController {
             $commandData = $this->commandRepository->getCommandById($commandId);
             if (empty($commandData)) {
                 $this->statusMessageService->setMessage('Commande introuvable.', 'error');
-                header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+                $this->router->redirect('/Commands');
                 exit;
             }
             
@@ -526,13 +526,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$createStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la création de la commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été créée avec succès.', 'success');
-        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        $this->router->redirect('/Commands');
         exit;
     }
 
@@ -555,7 +555,7 @@ class CommandController {
         // Vérification des permissions pour modifier la commande
         if (!$this->commandRepository->canUserPerformAction($user, (int)$commandId, 'modify')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour modifier cette commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
         
@@ -584,13 +584,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$updateStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la mise à jour.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('Les informations de la commande ont été mises à jour avec succès.', 'success');
-        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        $this->router->redirect('/Commands');
         exit;
     }
 
@@ -611,7 +611,7 @@ class CommandController {
         // Vérification des permissions pour supprimer la commande
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'delete')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour supprimer cette commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
         
@@ -621,13 +621,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$deleteStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la suppression de la commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été supprimée avec succès.', 'success');
-        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        $this->router->redirect('/Commands');
         exit;
     }
 
@@ -647,7 +647,7 @@ class CommandController {
         // Vérification des permissions pour valider la commande
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'validate')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour valider cette commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
         
@@ -657,13 +657,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$updateStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de la validation de la commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été validée avec succès.', 'success');
-        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        $this->router->redirect('/Commands');
         exit;
     }
 
@@ -683,7 +683,7 @@ class CommandController {
         // Vérification des permissions pour envoyer la commande
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'send')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour envoyer cette commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
         
@@ -693,13 +693,13 @@ class CommandController {
         // Gestion de l'échec : affichage d'un message d'erreur
         if (!$updateStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de l\'envoi de la commande.', 'error');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         } 
 
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été envoyée avec succès.', 'success');
-        header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+        $this->router->redirect('/Commands');
         exit;
     }
 
@@ -721,7 +721,7 @@ class CommandController {
         
         if (empty($commands)) {
             $this->statusMessageService->setMessage('Aucune commande à exporter.', 'info');
-            header('Location: ' . $_ENV['BASE_URL'] . '/Commands');
+            $this->router->redirect('/Commands');
             exit;
         }
 

@@ -1,6 +1,5 @@
 /**
  * Script de pagination simple pour les tableaux
- * Gère la pagination côté client pour permettre la recherche sur toutes les données
  */
 
 /**
@@ -56,22 +55,6 @@ function initTablePagination(tableSelector = 'table', itemsPerPage = 10) {
     }
     
     let currentPage = 1;
-    
-    // Fonction pour réinitialiser la pagination (appelée quand la recherche est effacée)
-    function resetPagination() {
-        // Restaurer toutes les lignes visibles
-        allRows.forEach((row) => {
-            row.style.display = '';
-            row.classList.remove('hidden');
-        });
-        
-        // Réinitialiser à la page 1
-        currentPage = 1;
-        showPage(1);
-    }
-    
-    // Exposer la fonction de réinitialisation globalement
-    window.resetTablePagination = resetPagination;
     
     // Fonction pour afficher la page courante
     function showPage(page) {

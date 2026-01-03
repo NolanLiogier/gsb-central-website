@@ -54,23 +54,6 @@ class ModifyCompanyTemplate {
         <!-- En-tête de la page -->
         <div class="mb-8 flex justify-between items-center">
             <h1 class="text-4xl font-bold text-gray-800">{$pageTitle}</h1>
-HTML;
-
-        // Ajout du bouton d'export PDF uniquement en mode modification
-        if ($isEditMode) {
-            $modifyCompanyContent .= <<<HTML
-            <form action="/ModifyCompany" method="POST" class="inline-block">
-                <input type="hidden" name="companyId" value="{$companyIdValue}">
-                <input type="hidden" name="exportPdf" value="true">
-                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
-                    <i class="fas fa-file-pdf text-white"></i>
-                    <span>Exporter en PDF</span>
-                </button>
-            </form>
-HTML;
-        }
-
-        $modifyCompanyContent .= <<<HTML
         </div>
 
         <!-- Formulaire de modification d'entreprise -->

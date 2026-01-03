@@ -104,7 +104,6 @@ Chaque utilisateur accède à un tableau de bord personnalisé affichant les sta
 - Modification des commandes selon leur statut
 - Validation des commandes par les commerciaux
 - Suivi de l'état des commandes (en attente, validée, envoyée)
-- Génération de documents PDF
 
 ### Gestion du Stock
 

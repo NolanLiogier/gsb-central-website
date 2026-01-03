@@ -37,17 +37,6 @@ class CompaniesTemplate {
                 </button>
             </form>
         </div>
-        
-        <!-- Champ de recherche -->
-        <div class="mb-6">
-            <div class="relative">
-                <input type="text" 
-                       id="company-search" 
-                       placeholder="Rechercher par nom d'entreprise..." 
-                       class="w-full md:w-1/3 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            </div>
-        </div>
 HTML;
 
         // Récupération sécurisée de la liste des entreprises (tableau vide si absente)
@@ -83,17 +72,11 @@ HTML;
 
         <!-- Script JavaScript pour gérer le clic sur les lignes du tableau -->
         <!-- Insère l'ID de l'entreprise dans le formulaire et le soumet automatiquement -->
-        <script src="/public/assets/js/table-search.js"></script>
         <script>
             function submitForm(companyId) {
                 document.getElementById('companyId').value = companyId;
                 document.getElementById('company-form').submit();
             }
-            
-            // Initialisation de la recherche (recherche dans la première colonne : nom d'entreprise)
-            document.addEventListener('DOMContentLoaded', function() {
-                initTableSearch('company-search', 'table', [0]);
-            });
         </script>
 
         HTML;

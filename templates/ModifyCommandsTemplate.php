@@ -412,7 +412,7 @@ HTML;
      */
     private function generateOrderSummary(array $selectedProducts, array $allProducts): string
     {
-        // Créer un tableau de recherche pour les produits
+        // Créer un tableau associatif pour les produits
         $productsMap = [];
         foreach ($allProducts as $product) {
             $productsMap[$product['product_id']] = $product;
@@ -465,7 +465,7 @@ HTML;
     {
         $subtotal = 0;
         
-        // Créer un tableau de recherche pour les produits
+        // Créer un tableau associatif pour les produits
         $productsMap = [];
         foreach ($allProducts as $product) {
             $productsMap[$product['product_id']] = $product;
@@ -493,7 +493,7 @@ HTML;
     {
         $subtotal = 0;
         
-        // Créer un tableau de recherche pour les produits
+        // Créer un tableau associatif pour les produits
         $productsMap = [];
         foreach ($allProducts as $product) {
             $productsMap[$product['product_id']] = $product;
@@ -522,7 +522,7 @@ HTML;
     {
         $subtotal = 0;
         
-        // Créer un tableau de recherche pour les produits
+        // Créer un tableau associatif pour les produits
         $productsMap = [];
         foreach ($allProducts as $product) {
             $productsMap[$product['product_id']] = $product;

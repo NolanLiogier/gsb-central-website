@@ -13,27 +13,13 @@ function toggleMobileMenu() {
 }
 
 /**
- * Bascule l'affichage de la barre de recherche mobile
- */
-function toggleMobileSearch() {
-    const mobileSearch = document.getElementById('mobileSearch');
-    if (mobileSearch) {
-        mobileSearch.classList.toggle('hidden');
-    }
-}
-
-/**
- * Ferme le menu mobile et la recherche lors du redimensionnement vers desktop
+ * Ferme le menu mobile lors du redimensionnement vers desktop
  */
 function handleResize() {
     if (window.innerWidth >= 1024) {
         const mobileMenu = document.getElementById('mobileMenu');
-        const mobileSearch = document.getElementById('mobileSearch');
         if (mobileMenu) {
             mobileMenu.classList.add('hidden');
-        }
-        if (mobileSearch) {
-            mobileSearch.classList.add('hidden');
         }
     }
 }
@@ -57,4 +43,3 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Exposer les fonctions globalement
 window.toggleMobileMenu = toggleMobileMenu;
-window.toggleMobileSearch = toggleMobileSearch;

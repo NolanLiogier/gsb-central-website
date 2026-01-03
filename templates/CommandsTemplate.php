@@ -32,39 +32,12 @@ HTML;
         $userFunctionId = $currentUser['fk_function_id'] ?? null;
         
         $commandContent .= '<div class="flex items-center space-x-4">';
-        $commandContent .= $this->generateExportButton();
         $commandContent .= $this->generateCreateButton($userFunctionId);
         $commandContent .= '</div>';
         
         $commandContent .= <<<HTML
         </div>
 HTML;
-        
-        // Affichage du champ de recherche pour tous les utilisateurs
-        $searchPlaceholder = '';
-        if ($userFunctionId == 1 || $userFunctionId == 3) {
-            // Commerciaux et logisticiens : recherche par client, entreprise ou date
-            $searchPlaceholder = 'Rechercher par client, entreprise ou date...';
-        } elseif ($userFunctionId == 2) {
-            // Clients : recherche par date ou statut
-            $searchPlaceholder = 'Rechercher par date ou statut...';
-        }
-        
-        if ($searchPlaceholder) {
-            $commandContent .= <<<HTML
-        
-        <!-- Champ de recherche -->
-        <div class="mb-6">
-            <div class="relative">
-                <input type="text" 
-                       id="command-search" 
-                       placeholder="{$searchPlaceholder}" 
-                       class="w-full md:w-1/3 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-            </div>
-        </div>
-HTML;
-        }
 
         // Récupération sécurisée de la liste des commandes
         $allCommands = $this->extractCommands($datas);
@@ -87,33 +60,6 @@ HTML;
         ]);
         
         $commandContent .= $tableHtml;
-        
-        // Script de recherche pour les commandes (pour tous les utilisateurs)
-        if ($searchPlaceholder) {
-            // Déterminer les colonnes à rechercher selon le rôle
-            $searchColumns = [];
-            if ($userFunctionId == 1 || $userFunctionId == 3) {
-                // Commerciaux et logisticiens : recherche dans client [0], entreprise [1], date de livraison [2] et date de création [3]
-                $searchColumns = [0, 1, 2, 3];
-            } elseif ($userFunctionId == 2) {
-                // Clients : recherche dans date de livraison [0], date de création [1] et statut [2]
-                $searchColumns = [0, 1, 2];
-            }
-            
-            $searchColumnsJson = json_encode($searchColumns, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
-            
-            $commandContent .= <<<HTML
-
-        <script src="/public/assets/js/table-search.js"></script>
-        <script>
-            // Initialisation de la recherche selon le rôle
-            document.addEventListener('DOMContentLoaded', function() {
-                const searchColumns = {$searchColumnsJson};
-                initTableSearch('command-search', 'table', searchColumns);
-            });
-        </script>
-HTML;
-        }
 
         return $commandContent;
     }
@@ -243,26 +189,6 @@ HTML;
         }
         
         return $buttons ?: '<span class="text-gray-400 text-xs">Aucune action</span>';
-    }
-
-    /**
-     * Génère le bouton d'export CSV.
-     * 
-     * Affiche le bouton d'export pour tous les utilisateurs authentifiés.
-     *
-     * @return string HTML du bouton d'export CSV.
-     */
-    private function generateExportButton(): string
-    {
-        return <<<HTML
-        <form action="/Commands" method="POST" class="inline-block">
-            <input type="hidden" name="exportCsv" value="true">
-            <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
-                <i class="fas fa-file-csv text-white"></i>
-                <span>Exporter en CSV</span>
-            </button>
-        </form>
-HTML;
     }
 
     /**

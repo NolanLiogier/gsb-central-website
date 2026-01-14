@@ -157,4 +157,4 @@ Ce projet a été développé dans le cadre de la formation **BTS SIO** (Service
 
 ---
 
-*Dernière mise à jour : 2024*
+*Dernière mise à jour : 2026*

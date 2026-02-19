@@ -784,6 +784,86 @@ class CommandRepository {
         }
     }
 
+    public function updateStockQty(int $commandId): array {
+        $command = $this->getCommandById($commandId);
+        if (empty($command) || empty($command['products'])) {
+            return ['success' => false, 'insufficient_products' => []];
+        }
+
+        $productQuantities = [];
+        foreach ($command['products'] as $p) {
+            $id = (int)($p['product_id'] ?? 0);
+            $qty = (int)($p['quantity'] ?? 0);
+            if ($id > 0 && $qty > 0) {
+                $productQuantities[$id] = ($productQuantities[$id] ?? 0) + $qty;
+            }
+        }
+
+        if (empty($productQuantities)) {
+            return ['success' => false, 'insufficient_products' => []];
+        }
+
+        $database = new Database();
+        $conn = $database->getConnection();
+        if (!$conn) {
+            return ['success' => false, 'insufficient_products' => []];
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($productQuantities), '?'));
+            $stmt = $conn->prepare("SELECT product_id, quantity, product_name FROM stock WHERE product_id IN ($placeholders)");
+            $stmt->execute(array_keys($productQuantities));
+            $stockRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $stockByProduct = [];
+            foreach ($stockRows as $row) {
+                $stockByProduct[(int)$row['product_id']] = [
+                    'quantity' => (int)$row['quantity'],
+                    'product_name' => $row['product_name'] ?? ''
+                ];
+            }
+
+            $insufficient = [];
+            foreach ($productQuantities as $productId => $required) {
+                $current = $stockByProduct[$productId]['quantity'] ?? 0;
+                if ($current < $required) {
+                    $insufficient[] = $stockByProduct[$productId]['product_name'] ?? 'product_id_' . $productId;
+                }
+            }
+
+            if (!empty($insufficient)) {
+                $conn = null;
+                $database = null;
+                return ['success' => false, 'insufficient_products' => $insufficient];
+            }
+
+            $conn->beginTransaction();
+            $stmt = $conn->prepare("UPDATE stock SET quantity = quantity - ? WHERE product_id = ? AND quantity >= ?");
+            foreach ($productQuantities as $productId => $qty) {
+                $stmt->execute([$qty, $productId, $qty]);
+                if ($stmt->rowCount() === 0) {
+                    $conn->rollBack();
+                    $conn = null;
+                    $database = null;
+                    return ['success' => false, 'insufficient_products' => []];
+                }
+            }
+            
+            $conn->commit();
+            $conn = null;
+            $database = null;
+            return ['success' => true, 'insufficient_products' => []];
+        } 
+        catch (PDOException $e) {
+            if ($conn && $conn->inTransaction()) {
+                $conn->rollBack();
+            }
+            $conn = null;
+            $database = null;
+            return ['success' => false, 'insufficient_products' => []];
+        }
+    }
+
     /**
      * Met à jour le statut d'une commande selon l'action effectuée.
      * 

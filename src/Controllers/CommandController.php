@@ -756,24 +756,33 @@ class CommandController {
         // Récupération de l'utilisateur actuel
         $user = $this->getCurrentUser();
         
-        // Vérification des permissions pour envoyer la commande
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'send')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour envoyer cette commande.', 'error');
             $this->router->redirect('/Commands');
             exit;
         }
-        
-        // Tentative de mise à jour du statut dans la base de données
+
+        $stockResult = $this->commandRepository->updateStockQty($commandId);
+        if (!$stockResult['success']) {
+            if (!empty($stockResult['insufficient_products'])) {
+                $msg = 'Stock insuffisant pour : ' . implode(', ', $stockResult['insufficient_products']);
+            } 
+            else {
+                $msg = 'Une erreur est survenue lors de la mise à jour du stock.';
+            }
+
+            $this->statusMessageService->setMessage($msg, 'error');
+            $this->router->redirect('/Commands');
+            exit;
+        }
+
         $updateStatus = $this->commandRepository->updateCommandStatus($commandId, 'send');
-        
-        // Gestion de l'échec : affichage d'un message d'erreur
         if (!$updateStatus) {
             $this->statusMessageService->setMessage('Une erreur est survenue lors de l\'envoi de la commande.', 'error');
             $this->router->redirect('/Commands');
             exit;
-        } 
+        }
 
-        // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été envoyée avec succès.', 'success');
         $this->router->redirect('/Commands');
         exit;

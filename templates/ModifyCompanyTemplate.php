@@ -51,9 +51,12 @@ class ModifyCompanyTemplate {
         $salesmanOptions = $this->generateSalesmanOptions($salesmen, $datas['selected_salesman_id'] ?? null);
 
         $modifyCompanyContent = <<<HTML
-        <!-- En-tête de la page -->
         <div class="mb-8 flex justify-between items-center">
             <h1 class="text-4xl font-bold text-gray-800">{$pageTitle}</h1>
+            <button type="button" id="exportCompanyPdf" class="inline-flex items-center px-4 py-2.5 text-sm font-medium text-white bg-red-600 border border-red-700 rounded-lg hover:bg-red-700 transition-colors duration-200">
+                <i class="fas fa-file-pdf mr-2"></i>
+                Export PDF
+            </button>
         </div>
 
         <!-- Formulaire de modification d'entreprise -->
@@ -245,6 +248,8 @@ class ModifyCompanyTemplate {
                 </div>
             </form>
         </div>
+        <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+        <script src="/public/assets/js/export-company-pdf.js"></script>
 
 HTML;
 

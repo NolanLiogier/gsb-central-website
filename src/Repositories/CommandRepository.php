@@ -663,11 +663,12 @@ class CommandRepository {
                     return false;
 
                 case 'delete':
-                    if ($userFunctionId == 2) { // Client
-                        // Client : seulement si statut = "en attente" (3)
+                    if ($commandStatusId == 2) {
+                        return false;
+                    }
+                    if ($userFunctionId == 2) {
                         return $commandStatusId == 3;
-                    } elseif ($userFunctionId == 1) { // Commercial
-                        // Commercial : peut supprimer toutes les commandes de ses clients
+                    } elseif ($userFunctionId == 1) {
                         return $this->isCommandFromSalesmanClient($user['user_id'], $commandId);
                     }
                     return false;

@@ -3,24 +3,28 @@
 namespace App\Helpers;
 
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use App\Helpers\UserService;
 use PhpOffice\PhpSpreadsheet\Writer\Csv;
-
 /**
  * Export des commandes au format CSV via PhpSpreadsheet.
  */
 class CommandCsvExportService
 {
-    /**
-     * Envoie un fichier CSV des commandes (en-têtes HTTP + corps).
-     *
-     * @param array $commands Résultat de CommandRepository::getCommandsByUserId (avec clé products).
-     */
+
+    private UserService $userService;
+
+    public function __construct()
+    {
+        $this->userService = new UserService();
+    }
+
     public function streamCommandsCsv(array $commands): void
     {
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
 
         $headerRow = [
+            'User ID',
             'ID commande',
             'Date de livraison',
             'Date de création',
@@ -29,9 +33,13 @@ class CommandCsvExportService
         ];
         $sheet->fromArray($headerRow, null, 'A1');
 
+
+        $user = $this->userService->getCurrentUser();
+
         $dataRows = [];
         foreach ($commands as $command) {
             $dataRows[] = [
+                $user['user_id'] ?? '0',
                 $command['command_id'] ?? '',
                 $this->formatDateTime($command['delivery_date'] ?? null),
                 $this->formatDateTime($command['created_at'] ?? null),

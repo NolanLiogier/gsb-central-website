@@ -32,6 +32,7 @@ HTML;
         $userFunctionId = $currentUser['fk_function_id'] ?? null;
         
         $commandContent .= '<div class="flex items-center space-x-4">';
+        $commandContent .= $this->generateExportCsvButton($userFunctionId);
         $commandContent .= $this->generateCreateButton($userFunctionId);
         $commandContent .= '</div>';
         
@@ -189,6 +190,29 @@ HTML;
         }
         
         return $buttons ?: '<span class="text-gray-400 text-xs">Aucune action</span>';
+    }
+
+    /**
+     * Bouton d'export CSV (GET) — clients uniquement, à gauche du bouton de création.
+     *
+     * @param int|null $userFunctionId ID de la fonction de l'utilisateur.
+     * @return string HTML du formulaire ou chaîne vide.
+     */
+    private function generateExportCsvButton(?int $userFunctionId): string
+    {
+        if ($userFunctionId !== 2) {
+            return '';
+        }
+
+        return <<<HTML
+            <form action="/Commands" method="GET" class="inline-block">
+                <input type="hidden" name="action" value="exportCsv">
+                <button type="submit" class="bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
+                    <i class="fas fa-file-csv"></i>
+                    <span>Exporter CSV</span>
+                </button>
+            </form>
+HTML;
     }
 
     /**

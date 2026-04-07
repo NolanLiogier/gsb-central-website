@@ -10,6 +10,7 @@ use App\Helpers\RenderService;
 use App\Helpers\AuthenticationService;
 use App\Helpers\StatusMessageService;
 use App\Helpers\UserService;
+use App\Helpers\CommandCsvExportService;
 use Routing\Router;
 
 /**
@@ -82,6 +83,13 @@ class CommandController {
     private Router $router;
 
     /**
+     * Export CSV des commandes (clients).
+     *
+     * @var CommandCsvExportService
+     */
+    private CommandCsvExportService $commandCsvExportService;
+
+    /**
      * Initialise le contrôleur en créant toutes les dépendances nécessaires.
      * Les services sont instanciés ici pour faciliter l'injection de dépendances.
      * 
@@ -98,6 +106,7 @@ class CommandController {
         $this->statusMessageService = new StatusMessageService();
         $this->userService = new UserService();
         $this->router = new Router();
+        $this->commandCsvExportService = new CommandCsvExportService();
     }
 
     /**
@@ -129,6 +138,26 @@ class CommandController {
     public function index(): void {
         // Vérification obligatoire de l'authentification avant tout traitement
         $this->authenticationService->verifyAuthentication();
+
+        // Export CSV (GET) — réservé aux clients (fk_function_id = 2)
+        if ($_SERVER['REQUEST_METHOD'] === 'GET'
+            && isset($_GET['action'])
+            && $_GET['action'] === 'exportCsv'
+        ) {
+            $user = $this->getCurrentUser();
+            if ((int)($user['fk_function_id'] ?? 0) !== 2) {
+                $this->statusMessageService->setMessage(
+                    'Vous n\'avez pas accès à l\'export CSV des commandes.',
+                    'error'
+                );
+                $this->router->redirect('/Commands');
+                exit;
+            }
+            $userId = (int)($user['user_id'] ?? 0);
+            $commands = $this->commandRepository->getCommandsByUserId($userId);
+            $this->commandCsvExportService->streamCommandsCsv($commands);
+            exit;
+        }
 
         // Gestion des actions POST spécifiques (affichage formulaire ou mise à jour)
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {

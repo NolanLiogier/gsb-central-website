@@ -271,11 +271,13 @@ class CommandRepository {
 
     /**
      * Récupère les produits d'une commande spécifique.
-     * 
+     *
+     * Utilisé pour les listes, getCommandById et les contrôles de stock.
+     *
      * @param int $commandId ID de la commande.
      * @return array Liste des produits avec leurs quantités et adresse de livraison.
      */
-    private function getCommandProducts(int $commandId): array {
+    public function getCommandProducts(int $commandId): array {
         // Initialisation de la connexion à la base de données
         $database = new Database();
         $conn = $database->getConnection();
@@ -306,6 +308,52 @@ class CommandRepository {
             
         } catch (PDOException $e) {
             // Fermeture de la connexion en cas d'erreur
+            $conn = null;
+            $database = null;
+            return [];
+        }
+    }
+
+    /**
+     * Récupère les quantités en stock actuelles pour une liste d'identifiants produit.
+     *
+     * @param array $productIds Liste d'entiers product_id.
+     * @return array Carte product_id => ['quantity' => int, 'product_name' => string].
+     */
+    public function getStockQuantitiesForProductIds(array $productIds): array {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $productIds))));
+        if ($ids === []) {
+            return [];
+        }
+
+        $database = new Database();
+        $conn = $database->getConnection();
+        if (!$conn) {
+            return [];
+        }
+
+        try {
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+            $stmt = $conn->prepare(
+                "SELECT product_id, quantity, product_name FROM stock WHERE product_id IN ($placeholders)"
+            );
+            $stmt->execute($ids);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $conn = null;
+            $database = null;
+
+            $map = [];
+            foreach ($rows as $row) {
+                $pid = (int) $row['product_id'];
+                $map[$pid] = [
+                    'quantity' => (int) ($row['quantity'] ?? 0),
+                    'product_name' => $row['product_name'] ?? '',
+                ];
+            }
+
+            return $map;
+        } catch (PDOException $e) {
             $conn = null;
             $database = null;
             return [];

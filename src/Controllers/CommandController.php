@@ -737,6 +737,51 @@ class CommandController {
     }
 
     /**
+     * Vérifie que le stock est suffisant pour chaque produit de la commande (sans mise à jour en base).
+     *
+     * @param int $commandId ID de la commande.
+     * @return array{valid: bool, insufficient_products: string[], empty_command: bool}
+     */
+    private function verifyCommandStock(int $commandId): array {
+        $products = $this->commandRepository->getCommandProducts($commandId);
+
+        $productQuantities = [];
+        foreach ($products as $p) {
+            $id = (int) ($p['product_id'] ?? 0);
+            $qty = (int) ($p['quantity'] ?? 0);
+            if ($id > 0 && $qty > 0) {
+                $productQuantities[$id] = ($productQuantities[$id] ?? 0) + $qty;
+            }
+        }
+
+        if ($productQuantities === []) {
+            return [
+                'valid' => false,
+                'insufficient_products' => [],
+                'empty_command' => true,
+            ];
+        }
+
+        $stockByProduct = $this->commandRepository->getStockQuantitiesForProductIds(array_keys($productQuantities));
+
+        $isValid = true;
+        $insufficient = [];
+        foreach ($productQuantities as $productId => $required) {
+            $current = $stockByProduct[$productId]['quantity'] ?? 0;
+            if ($current < $required) {
+                $isValid = false;
+                $insufficient[] = $stockByProduct[$productId]['product_name'] ?? 'product_id_' . $productId;
+            }
+        }
+
+        return [
+            'valid' => $isValid,
+            'insufficient_products' => $insufficient,
+            'empty_command' => false,
+        ];
+    }
+
+    /**
      * Traite la validation d'une commande par un commercial.
      * 
      * Change le statut de la commande de "en attente" (3) à "validé" (1).
@@ -752,6 +797,22 @@ class CommandController {
         // Vérification des permissions pour valider la commande
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'validate')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour valider cette commande.', 'error');
+            $this->router->redirect('/Commands');
+            exit;
+        }
+
+        $stockCheck = $this->verifyCommandStock($commandId);
+        if (!$stockCheck['valid']) {
+            if (!empty($stockCheck['empty_command'])) {
+                $msg = 'Impossible de valider : la commande ne contient aucun produit valide.';
+            } 
+            elseif (!empty($stockCheck['insufficient_products'])) {
+                $msg = 'Stock insuffisant pour : ' . implode(', ', $stockCheck['insufficient_products']);
+            } 
+            else {
+                $msg = 'Impossible de vérifier le stock pour cette commande.';
+            }
+            $this->statusMessageService->setMessage($msg, 'error');
             $this->router->redirect('/Commands');
             exit;
         }

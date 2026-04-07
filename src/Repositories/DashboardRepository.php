@@ -120,6 +120,7 @@ class DashboardRepository {
             'userRole' => 'commercial',
             // KPI
             'monthlyOrders' => $monthlyStats['orders'],
+            'pendingOrders' => $this->getCommercialPendingOrdersCount($salesmanId),
             'monthlyRevenue' => $revenueStats['revenue'],
             'previousMonthRevenue' => $revenueStats['previousRevenue'],
             'revenueEvolution' => $revenueStats['evolution'],
@@ -590,6 +591,43 @@ class DashboardRepository {
             $conn = null;
             $database = null;
             return ['orders' => 0];
+        }
+    }
+
+    /**
+     * Compte les commandes au statut « en attente » (fk_status_id = 3) pour le portefeuille du commercial.
+     *
+     * @param int $salesmanId ID du commercial.
+     * @return int Nombre de commandes en attente.
+     */
+    private function getCommercialPendingOrdersCount(int $salesmanId): int {
+        $database = new Database();
+        $conn = $database->getConnection();
+
+        try {
+            if (!$conn) {
+                return 0;
+            }
+
+            $query = "SELECT COUNT(cm.command_id) as total
+                      FROM commands cm
+                      INNER JOIN users u ON cm.fk_user_id = u.user_id
+                      INNER JOIN companies c ON u.fk_company_id = c.company_id
+                      WHERE c.fk_salesman_id = :salesmanId
+                      AND cm.fk_status_id = 3";
+            $stmt = $conn->prepare($query);
+            $stmt->bindParam(':salesmanId', $salesmanId, PDO::PARAM_INT);
+            $stmt->execute();
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $conn = null;
+            $database = null;
+
+            return (int)($result['total'] ?? 0);
+        } catch (PDOException $e) {
+            $conn = null;
+            $database = null;
+            return 0;
         }
     }
 

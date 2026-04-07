@@ -21,6 +21,7 @@ class DashboardService {
     public function prepareCommercialDashboardData(array $datas): array {
         // Extraction des données
         $monthlyOrders = (int)($datas['monthlyOrders'] ?? 0);
+        $pendingOrders = (int)($datas['pendingOrders'] ?? 0);
         $monthlyRevenue = (float)($datas['monthlyRevenue'] ?? 0);
         $revenueEvolution = (float)($datas['revenueEvolution'] ?? 0);
         $monthlyObjective = $datas['monthlyObjective'] ?? [];
@@ -49,6 +50,7 @@ class DashboardService {
         
         return [
             'monthlyOrders' => $monthlyOrders,
+            'pendingOrders' => $pendingOrders,
             'monthlyRevenueFormatted' => $monthlyRevenueFormatted,
             'revenueEvolution' => $revenueEvolution,
             'evolutionClass' => $evolution['textClass'],

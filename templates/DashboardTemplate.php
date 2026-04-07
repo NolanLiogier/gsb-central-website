@@ -180,6 +180,7 @@ class DashboardTemplate {
         $formattedData = $this->dashboardService->prepareCommercialDashboardData($datas);
         
         $monthlyOrders = $formattedData['monthlyOrders'];
+        $pendingOrders = $formattedData['pendingOrders'];
         $monthlyRevenueFormatted = $formattedData['monthlyRevenueFormatted'];
         $revenueEvolution = $formattedData['revenueEvolution'];
         $evolutionClass = $formattedData['evolutionClass'];
@@ -200,13 +201,23 @@ class DashboardTemplate {
                 <h1 class="text-3xl font-bold text-gray-800 mb-6">Tableau de bord commercial</h1>
                 
                 <!-- KPI Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                     <!-- Nombre de commandes ce mois -->
                     <div class="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                         <div class="flex items-center justify-between">
                             <div class="flex-1">
                                 <p class="text-sm text-gray-500 mb-1">Commandes ce mois</p>
                                 <p class="text-3xl font-bold text-blue-600">{$monthlyOrders}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Commandes en attente -->
+                    <div class="bg-white rounded-lg shadow p-6 border-l-4 border-amber-500">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <p class="text-sm text-gray-500 mb-1">En attente</p>
+                                <p class="text-3xl font-bold text-amber-600">{$pendingOrders}</p>
                             </div>
                         </div>
                     </div>

@@ -25,17 +25,20 @@ class StockTemplate {
      */
     public function displayStock(array $datas = []): string {
         $stockContent = <<<HTML
-        <!-- Titre de la page et bouton d'ajout -->
-        <div class="mb-8 flex justify-between items-center">
-            <h1 class="text-4xl font-bold text-gray-800">Stock</h1>
-            <form action="/ModifyStock" method="POST" class="inline-block">
-                <input type="hidden" name="newProduct" value="true">
-                <input type="hidden" name="renderAddProduct" value="true">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
-                    <i class="fas fa-plus text-white"></i>
-                    <span>Ajouter un produit</span>
-                </button>
-            </form>
+        <!-- Titre, bouton d'ajout, puis recherche au-dessus du tableau (alignée à gauche) -->
+        <div class="mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-4">
+                <h1 class="text-4xl font-bold text-gray-800">Stock</h1>
+                <form action="/ModifyStock" method="POST" class="inline-block shrink-0">
+                    <input type="hidden" name="newProduct" value="true">
+                    <input type="hidden" name="renderAddProduct" value="true">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg shadow-lg transition-colors duration-200 flex items-center space-x-2">
+                        <i class="fas fa-plus text-white"></i>
+                        <span>Ajouter un produit</span>
+                    </button>
+                </form>
+            </div>
+            <input type="search" id="stock-product-search" class="w-full max-w-md block border border-gray-300 rounded-lg px-4 py-3 min-h-[3rem] text-base text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Rechercher un produit…" autocomplete="off" oninput="runStockTableSearch(this.value)">
         </div>
 HTML;
 
@@ -62,6 +65,7 @@ HTML;
         $stockContent .= $tableHtml;
 
         $stockContent .= <<<HTML
+        <script src="/public/assets/js/stock-list-search.js"></script>
 
         <!-- Formulaire caché pour soumettre l'ID du produit lors du clic sur une ligne -->
         <!-- Permet de naviguer vers la page de modification sans formulaire visible -->

@@ -335,24 +335,22 @@ class CommandRepository {
         try {
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
             $stmt = $conn->prepare(
-                "SELECT product_id, quantity, product_name FROM stock WHERE product_id IN ($placeholders)"
+                "SELECT product_id, quantity, product_name 
+                 FROM stock 
+                 WHERE product_id IN ($placeholders)"
             );
+    
             $stmt->execute($ids);
-            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $conn = null;
-            $database = null;
-
-            $map = [];
-            foreach ($rows as $row) {
-                $pid = (int) $row['product_id'];
-                $map[$pid] = [
-                    'quantity' => (int) ($row['quantity'] ?? 0),
+    
+            $result = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $result[(int)$row['product_id']] = [
+                    'quantity' => (int)($row['quantity'] ?? 0),
                     'product_name' => $row['product_name'] ?? '',
                 ];
             }
-
-            return $map;
+    
+            return $result;
         } catch (PDOException $e) {
             $conn = null;
             $database = null;

@@ -827,6 +827,20 @@ class CommandController {
             exit;
         } 
 
+        $stockResult = $this->commandRepository->updateStockQty($commandId);
+        if (!$stockResult['success']) {
+            if (!empty($stockResult['insufficient_products'])) {
+                $msg = 'Stock insuffisant pour : ' . implode(', ', $stockResult['insufficient_products']);
+            } 
+            else {
+                $msg = 'Une erreur est survenue lors de la mise à jour du stock.';
+            }
+
+            $this->statusMessageService->setMessage($msg, 'error');
+            $this->router->redirect('/Commands');
+            exit;
+        }
+
         // Succès : message de confirmation et redirection vers la liste des commandes
         $this->statusMessageService->setMessage('La commande a été validée avec succès.', 'success');
         $this->router->redirect('/Commands');
@@ -848,20 +862,6 @@ class CommandController {
         
         if (!$this->commandRepository->canUserPerformAction($user, $commandId, 'send')) {
             $this->statusMessageService->setMessage('Vous n\'avez pas les permissions pour envoyer cette commande.', 'error');
-            $this->router->redirect('/Commands');
-            exit;
-        }
-
-        $stockResult = $this->commandRepository->updateStockQty($commandId);
-        if (!$stockResult['success']) {
-            if (!empty($stockResult['insufficient_products'])) {
-                $msg = 'Stock insuffisant pour : ' . implode(', ', $stockResult['insufficient_products']);
-            } 
-            else {
-                $msg = 'Une erreur est survenue lors de la mise à jour du stock.';
-            }
-
-            $this->statusMessageService->setMessage($msg, 'error');
             $this->router->redirect('/Commands');
             exit;
         }

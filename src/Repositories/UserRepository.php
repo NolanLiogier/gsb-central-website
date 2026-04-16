@@ -31,7 +31,7 @@ class UserRepository
         // Initialisation de la connexion à la base de données
         $database = new Database();
         $conn = $database->getConnection();
-        
+
         try {
             // Vérification de la connexion avant la requête
             if (!$conn) {
@@ -46,14 +46,17 @@ class UserRepository
                     WHERE u.email = :email";
             $stmt = $conn->prepare($sql);
             $stmt->execute(['email' => $email]);
-            
-            // ?? opérateur null coalescing pour retourner un tableau vide si fetch() retourne false
-            $result = $stmt->fetch(PDO::FETCH_ASSOC) ?? [];
-            
+
+            // fetch() retourne false si aucun résultat n'est trouvé, on retourne alors un tableau vide
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($result === false) {
+                $result = [];
+            }
+
             // Fermeture de la connexion
             $conn = null;
             $database = null;
-            
+
             return $result;
         } catch (PDOException $e) {
             // Fermeture de la connexion en cas d'erreur
